@@ -82,12 +82,26 @@
   .seg-grp button.both{border-left:3px solid var(--both);}
   .seg-grp button .k{display:block;color:#8fa0c6;font-size:11px;margin-top:2px;}
 
-  /* ===== 课件（PPT 题板）叠层 ===== */
-  #slideOv{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
-    flex-direction:column;gap:14px;background:rgba(4,8,16,.94);cursor:pointer;}
-  #slideOv.show{display:flex;}
-  #slideOv img{max-width:96vw;max-height:86vh;border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.6);}
-  #slideOv .hint{color:#9fb0cc;font-size:14px;letter-spacing:1px;}
+  /* ===== 课件（PPT 弹窗）===== */
+  #pptWin{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);z-index:40;display:none;
+    flex-direction:column;width:min(1060px,88vw);height:min(700px,78vh);min-width:480px;min-height:300px;
+    resize:both;overflow:hidden;border-radius:14px;border:1px solid rgba(255,255,255,.16);
+    background:#0b1220;box-shadow:0 26px 80px rgba(0,0,0,.72);}
+  #pptWin.show{display:flex;}
+  .pptbar{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:move;user-select:none;
+    background:linear-gradient(180deg,rgba(255,176,32,.22),rgba(255,176,32,.05));
+    border-bottom:1px solid rgba(255,255,255,.12);}
+  .pptbar b{font-size:14px;letter-spacing:1px;color:#ffd88a;white-space:nowrap;}
+  .pptbar .pg{font-size:12px;color:#9fb0cc;white-space:nowrap;}
+  .pptbar .grow{flex:1;}
+  .pptbar button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.18);
+    border-radius:8px;padding:3px 10px;font-size:13px;line-height:1.5;}
+  .pptbar button:hover{background:rgba(255,255,255,.2);}
+  #pptWin .pptbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:6px;
+    background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.06),transparent 70%);}
+  #pptWin .pptbody img{max-width:100%;max-height:100%;border-radius:8px;}
+  #pptWin .ppthint{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:12px;color:#8ea0c4;
+    padding:3px;background:linear-gradient(0deg,rgba(0,0,0,.5),transparent);pointer-events:none;}
   .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
     background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
   .slide-badge.show{display:block;}
@@ -105,12 +119,23 @@
     <div class="heard" id="heard"></div>
   </div>
 
-  <div class="slide-badge" id="slideBadge">课件</div>
-  <div id="slideOv"><img id="slideImg" alt="课件"><div class="hint">点击画面继续 / 收起　<span id="slideIdx"></span><span id="slideNext" style="display:none;color:#ffb020">　→ 还有下一页</span></div></div>
+  <div class="slide-badge" id="slideBadge" title="点击可再次调出课件">课件</div>
+  <div id="pptWin">
+    <div class="pptbar" id="pptBar">
+      <b id="pptName">课件</b><span class="pg" id="pptPage"></span><span class="grow"></span>
+      <button id="pptPrev" title="上一页（←）">◀</button>
+      <button id="pptNext" title="下一页（→ 或空格）">▶</button>
+      <button id="pptFull" title="全屏 / 还原（F）">全屏</button>
+      <button id="pptPop" title="在新窗口打开完整 PPT（可拖到副屏）">新窗口</button>
+      <button id="pptClose" title="收起（Esc）">✕</button>
+    </div>
+    <div class="pptbody" id="pptBody"><img id="pptImg" alt="课件"></div>
+    <div class="ppthint">点画面下一页 · 拖动标题栏移动 · 右下角可拉伸大小</div>
+  </div>
 
   <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
   <div class="panel" id="panel">
-    <div class="bar"><b>教师控制台</b><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
+    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
     <div class="scroll" id="scroll"></div>
   </div>
 
@@ -137,34 +162,81 @@ const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相�
                 4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
 let playing=false, started=false, recog=null;
 
-let slideList=[], slideIdx=0;
-function showSlides(list){
+let slideList=[], slideIdx=0, slideName='课件', curImg='';
+
+function showSlides(list, name){
   list=(list||[]).filter(Boolean);
   if(!list.length){ hideSlide(); return; }
-  slideList=list; slideIdx=0; renderSlide();
-  document.getElementById('slideOv').classList.add('show');
+  slideList=list; slideIdx=0;
+  if(name) slideName=name;
+  document.getElementById('pptName').textContent=slideName;
+  document.getElementById('pptWin').classList.add('show');
   document.getElementById('slideBadge').classList.add('show');
+  renderSlide();
 }
 function renderSlide(){
-  const img=document.getElementById('slideImg');
-  img.setAttribute('src', slideList[slideIdx]);
-  const n=document.getElementById('slideIdx');
-  n.textContent = slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
-  document.getElementById('slideNext').style.display =
-    (slideList.length>1 && slideIdx<slideList.length-1) ? 'block' : 'none';
+  curImg=slideList[slideIdx]||'';
+  document.getElementById('pptImg').setAttribute('src',curImg);
+  document.getElementById('pptPage').textContent =
+    slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
+  document.getElementById('pptPrev').disabled = (slideIdx<=0);
+  document.getElementById('pptNext').disabled = (slideIdx>=slideList.length-1);
+}
+function slideGo(d){
+  if(!slideList.length) return;
+  const n=slideIdx+d;
+  if(n<0||n>=slideList.length) return;
+  slideIdx=n; renderSlide();
 }
 function hideSlide(){
-  slideList=[]; slideIdx=0;
-  document.getElementById('slideOv').classList.remove('show');
+  slideList=[]; slideIdx=0; curImg='';
+  document.getElementById('pptWin').classList.remove('show');
   document.getElementById('slideBadge').classList.remove('show');
 }
-document.getElementById('slideOv').onclick=()=>{
-  if(slideList.length>1 && slideIdx<slideList.length-1){ slideIdx++; renderSlide(); }
-  else { hideSlide(); }
+/* 标题栏拖动 */
+(function(){
+  const bar=document.getElementById('pptBar'), win=document.getElementById('pptWin');
+  let dx=0,dy=0,drag=false;
+  bar.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='BUTTON') return;
+    const r=win.getBoundingClientRect();
+    win.style.transform='none'; win.style.left=r.left+'px'; win.style.top=r.top+'px';
+    dx=e.clientX-r.left; dy=e.clientY-r.top; drag=true; e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!drag) return;
+    win.style.left=Math.max(0,Math.min(window.innerWidth-120,e.clientX-dx))+'px';
+    win.style.top =Math.max(0,Math.min(window.innerHeight-60,e.clientY-dy))+'px';
+  });
+  window.addEventListener('mouseup',()=>drag=false);
+})();
+document.getElementById('pptBody').onclick=()=>slideGo(1);
+document.getElementById('pptPrev').onclick=e=>{e.stopPropagation();slideGo(-1);};
+document.getElementById('pptNext').onclick=e=>{e.stopPropagation();slideGo(1);};
+document.getElementById('pptClose').onclick=e=>{e.stopPropagation();hideSlide();};
+document.getElementById('pptFull').onclick=e=>{
+  e.stopPropagation();
+  const w=document.getElementById('pptWin');
+  if(document.fullscreenElement){ document.exitFullscreen(); }
+  else if(w.requestFullscreen){ w.requestFullscreen().catch(()=>{}); }
+};
+document.getElementById('pptPop').onclick=e=>{
+  e.stopPropagation();
+  const u='viewer.html'+(curImg?('?start='+encodeURIComponent(curImg.split('/').pop())):'');
+  window.open(u,'pptdeck','width=1280,height=780,menubar=no,toolbar=no');
 };
 document.getElementById('slideBadge').onclick=()=>{
-  document.getElementById('slideOv').classList.toggle('show');
+  const w=document.getElementById('pptWin');
+  if(slideList.length){ w.classList.toggle('show'); }
 };
+window.addEventListener('keydown',e=>{
+  const w=document.getElementById('pptWin');
+  if(!w.classList.contains('show')) return;
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ slideGo(1); e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ slideGo(-1); e.preventDefault(); }
+  else if(e.key==='Escape'){ hideSlide(); }
+  else if(e.key==='f'||e.key==='F'){ document.getElementById('pptFull').click(); }
+});
 
 /* ---------- 播放 ---------- */
 function playSrc(src,{loop=false,muted=false,onend}={}){
@@ -180,7 +252,7 @@ function playEntry(item){
   if(!item||!item.video) return;
   playing=true;
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
-  if(_sl){ showSlides(_sl); } else { hideSlide(); }
+  if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
   playSrc(item.video,{loop:false,muted:false,onend:goIdle});
   if(item.subtitle){
     bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
@@ -232,6 +304,9 @@ document.getElementById('startBtn').onclick=()=>{
 };
 
 /* ---------- 控制台：按环节分组 ---------- */
+document.getElementById('openPptBtn').onclick=()=>{
+  window.open('viewer.html','pptdeck','width=1280,height=780,menubar=no,toolbar=no');
+};
 document.getElementById('panelToggle').onclick=()=>{
   document.getElementById('panel').classList.toggle('open');
 };
