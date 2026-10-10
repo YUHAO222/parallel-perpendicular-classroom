@@ -83,10 +83,12 @@
   .seg-grp button .k{display:block;color:#8fa0c6;font-size:11px;margin-top:2px;}
 
   /* ===== 课件（PPT 弹窗）===== */
-  #pptWin{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);z-index:40;display:none;
-    flex-direction:column;width:min(1060px,88vw);height:min(700px,78vh);min-width:480px;min-height:300px;
+  #pptWin{position:fixed;z-index:40;display:none;flex-direction:column;
+    right:2.2vw;top:11vh;width:min(780px,48vw);height:min(620px,66vh);min-width:400px;min-height:260px;
     resize:both;overflow:hidden;border-radius:14px;border:1px solid rgba(255,255,255,.16);
     background:#0b1220;box-shadow:0 26px 80px rgba(0,0,0,.72);}
+  #pptWin.big{right:auto;left:50%;top:48%;transform:translate(-50%,-50%);
+    width:min(1180px,90vw);height:min(760px,82vh);}
   #pptWin.show{display:flex;}
   .pptbar{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:move;user-select:none;
     background:linear-gradient(180deg,rgba(255,176,32,.22),rgba(255,176,32,.05));
@@ -125,12 +127,13 @@
       <b id="pptName">课件</b><span class="pg" id="pptPage"></span><span class="grow"></span>
       <button id="pptPrev" title="上一页（←）">◀</button>
       <button id="pptNext" title="下一页（→ 或空格）">▶</button>
+      <button id="pptSize" title="停靠（不挡角色）/ 放大居中">放大</button>
       <button id="pptFull" title="全屏 / 还原（F）">全屏</button>
       <button id="pptPop" title="在新窗口打开完整 PPT（可拖到副屏）">新窗口</button>
       <button id="pptClose" title="收起（Esc）">✕</button>
     </div>
     <div class="pptbody" id="pptBody"><img id="pptImg" alt="课件"></div>
-    <div class="ppthint">点画面下一页 · 拖动标题栏移动 · 右下角可拉伸大小</div>
+    <div class="ppthint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 「放大」可居中</div>
   </div>
 
   <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
@@ -200,7 +203,10 @@ function hideSlide(){
   bar.addEventListener('mousedown',e=>{
     if(e.target.tagName==='BUTTON') return;
     const r=win.getBoundingClientRect();
-    win.style.transform='none'; win.style.left=r.left+'px'; win.style.top=r.top+'px';
+    win.classList.remove('big');
+    win.style.transform='none'; win.style.right='auto';
+    win.style.left=r.left+'px'; win.style.top=r.top+'px';
+    document.getElementById('pptSize').textContent='放大';
     dx=e.clientX-r.left; dy=e.clientY-r.top; drag=true; e.preventDefault();
   });
   window.addEventListener('mousemove',e=>{
@@ -214,6 +220,13 @@ document.getElementById('pptBody').onclick=()=>slideGo(1);
 document.getElementById('pptPrev').onclick=e=>{e.stopPropagation();slideGo(-1);};
 document.getElementById('pptNext').onclick=e=>{e.stopPropagation();slideGo(1);};
 document.getElementById('pptClose').onclick=e=>{e.stopPropagation();hideSlide();};
+document.getElementById('pptSize').onclick=e=>{
+  e.stopPropagation();
+  const w=document.getElementById('pptWin');
+  const big=w.classList.toggle('big');
+  w.style.left=''; w.style.top=''; w.style.right=''; w.style.transform='';
+  document.getElementById('pptSize').textContent = big ? '停靠' : '放大';
+};
 document.getElementById('pptFull').onclick=e=>{
   e.stopPropagation();
   const w=document.getElementById('pptWin');
