@@ -81,6 +81,16 @@
   .seg-grp button.bj{border-left:3px solid var(--bj);}
   .seg-grp button.both{border-left:3px solid var(--both);}
   .seg-grp button .k{display:block;color:#8fa0c6;font-size:11px;margin-top:2px;}
+
+  /* ===== 课件（PPT 题板）叠层 ===== */
+  #slideOv{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+    flex-direction:column;gap:14px;background:rgba(4,8,16,.94);cursor:pointer;}
+  #slideOv.show{display:flex;}
+  #slideOv img{max-width:96vw;max-height:86vh;border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.6);}
+  #slideOv .hint{color:#9fb0cc;font-size:14px;letter-spacing:1px;}
+  .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
+    background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
+  .slide-badge.show{display:block;}
 </style>
 </head>
 <body>
@@ -94,6 +104,9 @@
     <div class="bubble" id="bubble"><span class="who" id="who"></span><span id="reply"></span></div>
     <div class="heard" id="heard"></div>
   </div>
+
+  <div class="slide-badge" id="slideBadge">课件</div>
+  <div id="slideOv"><img id="slideImg" alt="课件"><div class="hint">点击画面继续 / 收起　<span id="slideIdx"></span><span id="slideNext" style="display:none;color:#ffb020">　→ 还有下一页</span></div></div>
 
   <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
   <div class="panel" id="panel">
@@ -124,6 +137,35 @@ const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相�
                 4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
 let playing=false, started=false, recog=null;
 
+let slideList=[], slideIdx=0;
+function showSlides(list){
+  list=(list||[]).filter(Boolean);
+  if(!list.length){ hideSlide(); return; }
+  slideList=list; slideIdx=0; renderSlide();
+  document.getElementById('slideOv').classList.add('show');
+  document.getElementById('slideBadge').classList.add('show');
+}
+function renderSlide(){
+  const img=document.getElementById('slideImg');
+  img.setAttribute('src', slideList[slideIdx]);
+  const n=document.getElementById('slideIdx');
+  n.textContent = slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
+  document.getElementById('slideNext').style.display =
+    (slideList.length>1 && slideIdx<slideList.length-1) ? 'block' : 'none';
+}
+function hideSlide(){
+  slideList=[]; slideIdx=0;
+  document.getElementById('slideOv').classList.remove('show');
+  document.getElementById('slideBadge').classList.remove('show');
+}
+document.getElementById('slideOv').onclick=()=>{
+  if(slideList.length>1 && slideIdx<slideList.length-1){ slideIdx++; renderSlide(); }
+  else { hideSlide(); }
+};
+document.getElementById('slideBadge').onclick=()=>{
+  document.getElementById('slideOv').classList.toggle('show');
+};
+
 /* ---------- 播放 ---------- */
 function playSrc(src,{loop=false,muted=false,onend}={}){
   player.loop=loop; player.muted=muted; player.src=src;
@@ -131,12 +173,14 @@ function playSrc(src,{loop=false,muted=false,onend}={}){
   player.onended=()=>{ if(!player.loop) onend&&onend(); };
 }
 function goIdle(){
-  playing=false; bubble.style.display='none'; speakerTag.style.display='none';
+  playing=false; hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
   if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
 }
 function playEntry(item){
   if(!item||!item.video) return;
   playing=true;
+  const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
+  if(_sl){ showSlides(_sl); } else { hideSlide(); }
   playSrc(item.video,{loop:false,muted:false,onend:goIdle});
   if(item.subtitle){
     bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
