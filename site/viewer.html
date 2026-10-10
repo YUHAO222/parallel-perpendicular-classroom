@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"/>
+<title>《平行与垂直》课堂 PPT</title>
+<style>
+  html,body{margin:0;height:100%;background:#070b14;overflow:hidden;
+    font-family:"Microsoft YaHei",system-ui,sans-serif;color:#e8eefb;}
+  #stage{position:absolute;inset:0 0 56px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  #stage img{max-width:96%;max-height:96%;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.7);}
+  #bar{position:absolute;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:12px;
+    padding:0 16px;background:rgba(12,18,32,.96);border-top:1px solid rgba(255,255,255,.12);}
+  #bar button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.2);
+    border-radius:8px;padding:6px 14px;font-size:14px;}
+  #bar button:hover{background:rgba(255,255,255,.2);}
+  #bar .t{font-size:14px;font-weight:700;color:#ffd88a;letter-spacing:1px;}
+  #bar .p{font-size:13px;color:#9fb0cc;min-width:74px;text-align:center;}
+  #bar .g{flex:1;}
+  #tip{position:fixed;left:50%;top:10px;transform:translateX(-50%);font-size:12px;color:#8ea0c4;
+    background:rgba(0,0,0,.45);padding:4px 14px;border-radius:999px;}
+</style></head>
+<body>
+  <div id="stage"><img id="img" alt="PPT 页面"/></div>
+  <div id="bar">
+    <span class="t">《平行与垂直》课堂 PPT</span>
+    <button id="prev">◀ 上一页</button><span class="p" id="page"></span><button id="next">下一页 ▶</button>
+    <button id="full">全屏</button>
+    <span class="g"></span><span id="name" style="font-size:12px;color:#8ea0c4"></span>
+  </div>
+  <div id="tip">← → / 空格 翻页 · 点画面右半边下一页 · F 全屏 · Esc 退出全屏</div>
+<script>
+const DECK=[
+ "slides/00_封面.png","slides/01_环节二_判断练习.png","slides/02_环节五_第一题.png",
+ "slides/03_环节五_第二题_判断.png","slides/04_环节五_第三题_迷宫.png","slides/05_环节六_思维导图.png",
+ "slides/06_学生作品_手画直线.png","slides/07_学生作品_编号1.png","slides/08_学生作品_编号2.png",
+ "slides/09_学生作品_编号3.png","slides/10_判断练习_答案一.png","slides/11_判断练习_答案二.png",
+ "slides/12_第一题_答案一.png","slides/13_第一题_答案二.png","slides/14_迷宫作品_几何大冒险.png"];
+let i=0;
+const stage=document.getElementById('stage'),img=document.getElementById('img');
+function show(n){
+  i=Math.max(0,Math.min(DECK.length-1,n));
+  img.src=DECK[i];
+  document.getElementById('page').textContent=(i+1)+' / '+DECK.length;
+  document.getElementById('name').textContent=DECK[i].split('/').pop().replace(/\.png$/,'');
+  document.getElementById('prev').disabled=(i===0);
+  document.getElementById('next').disabled=(i===DECK.length-1);
+}
+document.getElementById('prev').onclick=e=>{e.stopPropagation();show(i-1);};
+document.getElementById('next').onclick=e=>{e.stopPropagation();show(i+1);};
+document.getElementById('full').onclick=e=>{
+  e.stopPropagation();
+  if(document.fullscreenElement){document.exitFullscreen();}
+  else{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}
+};
+stage.onclick=e=>{const r=stage.getBoundingClientRect();
+  show(e.clientX < r.left+r.width/2 ? i-1 : i+1);};
+window.addEventListener('wheel',e=>{show(i+(e.deltaY>0?1:-1));},{passive:true});
+window.addEventListener('keydown',e=>{
+  if(['ArrowRight',' ','PageDown','Enter'].includes(e.key)){show(i+1);e.preventDefault();}
+  else if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){show(i-1);e.preventDefault();}
+  else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(DECK.length-1);}
+  else if(e.key==='f'||e.key==='F'){document.getElementById('full').click();}
+});
+const st=new URLSearchParams(location.search).get('start');
+show(st ? Math.max(0, DECK.findIndex(x=>x.split('/').pop()===st)) : 0);
+</script></body></html>
