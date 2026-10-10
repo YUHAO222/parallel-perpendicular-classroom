@@ -1,0 +1,7 @@
+*.log
+__pycache__/
+*.pyc
+.hf/
+node_modules/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>平行与垂直 · 双智能体课堂</title>
+<style>
+  :root{
+    --wk:#ffb020; --bj:#5fb8ff; --both:#ffe9a8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:#000;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#fff;}
+  body{user-select:none;}
+
+  /* ===== 整屏视频 ===== */
+  .screen{position:fixed;inset:0;background:#000;overflow:hidden;}
+  video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:20;text-align:center;padding:18px 16px 0;
+    pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.45),transparent);}
+  header h1{font-size:clamp(20px,2.8vw,34px);letter-spacing:5px;font-weight:800;
+    background:linear-gradient(90deg,var(--wk),#ffe9a8,var(--bj));
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+
+  .micstate{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:21;
+    display:flex;align-items:center;gap:8px;font-size:13px;color:#c3cfe4;
+    background:rgba(0,0,0,.32);padding:5px 13px;border-radius:999px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:#5b6b86;}
+  .micstate.live .dot{background:#37e08a;box-shadow:0 0 12px #37e08a;animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.4);opacity:.6;}}
+
+  .speaker-tag{position:fixed;top:70px;left:22px;z-index:21;display:none;
+    padding:7px 16px;border-radius:999px;font-weight:800;letter-spacing:2px;font-size:15px;
+    background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px);}
+  .speaker-tag[data-ch="wk"]{color:var(--wk);border-color:var(--wk);}
+  .speaker-tag[data-ch="bj"]{color:var(--bj);border-color:var(--bj);}
+  .speaker-tag[data-ch="both"]{color:var(--both);}
+
+  /* 字幕 */
+  .subs{position:fixed;left:50%;bottom:clamp(20px,4.5vh,48px);transform:translateX(-50%);
+    width:min(92vw,1100px);z-index:20;text-align:center;pointer-events:none;}
+  .bubble{display:none;padding:14px 26px;border-radius:15px;line-height:1.6;
+    background:rgba(8,12,24,.7);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);
+    font-size:clamp(15px,1.9vw,24px);box-shadow:0 10px 26px rgba(0,0,0,.45);}
+  .bubble .who{font-weight:800;margin-right:9px;}
+  .bubble[data-ch="wk"] .who{color:var(--wk);}
+  .bubble[data-ch="bj"] .who{color:var(--bj);}
+  .bubble[data-ch="both"] .who{color:var(--both);}
+  .heard{margin-top:9px;font-size:clamp(11px,1.3vw,15px);color:#9fb0cc;min-height:18px;}
+
+  /* 开场遮罩 */
+  .start{position:fixed;inset:0;z-index:60;background:rgba(6,10,20,.94);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;}
+  .start h2{font-size:clamp(22px,3.6vw,40px);letter-spacing:3px;}
+  .start p{color:#a9b8d2;max-width:620px;line-height:1.8;font-size:15px;}
+  .btn{cursor:pointer;border:none;border-radius:999px;padding:15px 44px;font-size:19px;font-weight:800;letter-spacing:2px;color:#1a1206;
+    background:linear-gradient(90deg,var(--wk),#ffd76b);box-shadow:0 10px 30px rgba(255,180,40,.4);transition:transform .2s;}
+  .btn:active{transform:scale(.96);}
+  .nospeech{color:#ff9c7a;font-size:13px;max-width:540px;line-height:1.7;}
+
+  /* ===== 教师控制台（可收起，投屏时几乎不可见）===== */
+  .panel-toggle{position:fixed;right:14px;bottom:14px;z-index:45;cursor:pointer;
+    width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);
+    background:rgba(14,22,40,.78);backdrop-filter:blur(6px);color:#dbe6f7;font-size:20px;}
+  .panel{position:fixed;right:14px;bottom:70px;z-index:44;width:min(360px,86vw);max-height:74vh;
+    display:none;flex-direction:column;gap:8px;overflow:hidden;
+    background:rgba(10,16,30,.86);border:1px solid rgba(255,255,255,.14);border-radius:16px;backdrop-filter:blur(10px);}
+  .panel.open{display:flex;}
+  .panel .bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,.1);}
+  .panel .bar b{font-size:14px;letter-spacing:1px;}
+  .panel .bar .idlebtn{cursor:pointer;font-size:12px;color:#cdd8ea;border:1px solid rgba(255,255,255,.2);
+    padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.06);}
+  .scroll{overflow:auto;padding:6px 10px 12px;display:flex;flex-direction:column;gap:10px;}
+  .seg-grp{display:flex;flex-direction:column;gap:5px;}
+  .seg-label{font-size:12px;color:#9fb0d0;letter-spacing:1px;padding:2px 4px;position:sticky;top:0;
+    background:rgba(10,16,30,.9);padding:4px;}
+  .seg-grp button{cursor:pointer;text-align:left;border:1px solid rgba(255,255,255,.12);color:#e6edf8;
+    background:rgba(255,255,255,.05);border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.4;}
+  .seg-grp button:active{transform:scale(.98);}
+  .seg-grp button.wk{border-left:3px solid var(--wk);}
+  .seg-grp button.bj{border-left:3px solid var(--bj);}
+  .seg-grp button.both{border-left:3px solid var(--both);}
+  .seg-grp button .k{display:block;color:#8fa0c6;font-size:11px;margin-top:2px;}
+</style>
+</head>
+<body>
+  <div class="screen"><video id="player" src="" muted playsinline autoplay loop></video></div>
+
+  <header><h1>平 行 与 垂 直</h1></header>
+  <div class="speaker-tag" id="speakerTag"></div>
+  <div class="micstate" id="micstate"><span class="dot"></span><span id="mictxt">语音未启动</span></div>
+
+  <div class="subs">
+    <div class="bubble" id="bubble"><span class="who" id="who"></span><span id="reply"></span></div>
+    <div class="heard" id="heard"></div>
+  </div>
+
+  <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
+  <div class="panel" id="panel">
+    <div class="bar"><b>教师控制台</b><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
+    <div class="scroll" id="scroll"></div>
+  </div>
+
+  <div class="start" id="start">
+    <h2>《平行与垂直》双智能体课堂</h2>
+    <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
+       开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。</p>
+    <button class="btn" id="startBtn">进入课堂</button>
+    <p class="nospeech" id="nospeech" style="display:none;">
+      当前浏览器不支持离线语音识别（需 Chrome/Edge）。不影响使用：请用右下角控制台按环节点击播放。
+    </p>
+  </div>
+
+<script src="dialogues.js"></script>
+<script>
+const CFG=window.DIALOGUES;
+const player=document.getElementById('player');
+const bubble=document.getElementById('bubble'),whoEl=document.getElementById('who'),
+      replyEl=document.getElementById('reply'),heardEl=document.getElementById('heard');
+const speakerTag=document.getElementById('speakerTag');
+const micstate=document.getElementById('micstate'),mictxt=document.getElementById('mictxt');
+const CH_NAME={wk:'孙悟空',bj:'猪八戒',both:'双人'};
+const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相交',3:'环节三 · 同一平面',
+                4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
+let playing=false, started=false, recog=null;
+
+/* ---------- 播放 ---------- */
+function playSrc(src,{loop=false,muted=false,onend}={}){
+  player.loop=loop; player.muted=muted; player.src=src;
+  player.play().catch(()=>{});
+  player.onended=()=>{ if(!player.loop) onend&&onend(); };
+}
+function goIdle(){
+  playing=false; bubble.style.display='none'; speakerTag.style.display='none';
+  if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
+}
+function playEntry(item){
+  if(!item||!item.video) return;
+  playing=true;
+  playSrc(item.video,{loop:false,muted:false,onend:goIdle});
+  if(item.subtitle){
+    bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
+    whoEl.textContent=(CH_NAME[item.ch]||'')+'：'; replyEl.textContent=item.subtitle;
+  }else{bubble.style.display='none';}
+  if(item.ch){
+    speakerTag.style.display='block'; speakerTag.dataset.ch=item.ch;
+    speakerTag.textContent=CH_NAME[item.ch]||'';
+  }
+}
+
+/* ---------- 语音匹配：按 say 关键词命中最长最多者 ---------- */
+function matchEntry(text){
+  let best=null,bestScore=0;
+  (CFG.items||[]).forEach(it=>{
+    let score=0;
+    (it.say||[]).forEach(k=>{ if(k&&text.includes(k)) score+=k.length; });
+    if(score>bestScore){bestScore=score;best=it;}
+  });
+  return best;
+}
+function handleText(text){
+  heardEl.textContent='听到：'+text;
+  const hit=matchEntry(text);
+  if(hit){ playEntry(hit); return; }
+  // 仅喊角色名 → 对应兜底
+  if(/悟空|孙悟空/.test(text)){ playEntry(CFG.fallback.wk); return; }
+  if(/八戒|猪八戒/.test(text)){ playEntry(CFG.fallback.bj); }
+}
+
+/* ---------- 浏览器识别（可替换为扣子ASR）---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){
+  recog=new SR();recog.lang='zh-CN';recog.continuous=true;recog.interimResults=false;
+  recog.onresult=(e)=>{const t=e.results[e.results.length-1][0].transcript.trim();
+    if(t&&!playing) handleText(t);};
+  recog.onend=()=>{try{if(started)recog.start();}catch(_){}};
+  recog.onerror=()=>{mictxt.textContent='识别受限，请用控制台';};
+}
+
+document.getElementById('startBtn').onclick=()=>{
+  document.getElementById('start').style.display='none';
+  started=true;
+  // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
+  if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
+  else { goIdle(); }
+  if(recog){try{recog.start();micstate.classList.add('live');mictxt.textContent='语音聆听中';}catch(_){}}
+  else{document.getElementById('nospeech').style.display='block';document.getElementById('start').style.display='flex';}
+};
+
+/* ---------- 控制台：按环节分组 ---------- */
+document.getElementById('panelToggle').onclick=()=>{
+  document.getElementById('panel').classList.toggle('open');
+};
+document.getElementById('goIdleBtn').onclick=goIdle;
+
+function buildPanel(){
+  const scroll=document.getElementById('scroll');
+  if(!CFG)return;
+  const groups={};
+  (CFG.items||[]).forEach(it=>{
+    (groups[it.seg]=groups[it.seg]||[]).push(it);
+  });
+  Object.keys(groups).sort().forEach(s=>{
+    const g=document.createElement('div');g.className='seg-grp';
+    const lab=document.createElement('div');lab.className='seg-label';
+    lab.textContent=(SEG_NAME[s]||('环节'+s))+'（'+groups[s].length+'）';
+    g.appendChild(lab);
+    groups[s].forEach(it=>{
+      const b=document.createElement('button');b.className=it.ch||'both';
+      b.innerHTML=(it.id+' '+(CH_NAME[it.ch]||''))+'<span class="k">'+
+        ((it.subtitle||'').slice(0,22))+'…</span>';
+      b.title='口令：'+(it.say||[]).join(' / ');
+      b.onclick=()=>{playEntry(it);};
+      g.appendChild(b);
+    });
+    scroll.appendChild(g);
+  });
+}
+buildPanel();
+if(CFG&&CFG.idle){player.src=CFG.idle;}
+</script>
+</body>
+</html>
