@@ -69,28 +69,25 @@ window.DIALOGUES = {
       slides:["slides/06_学生作品_手画直线.png", "slides/07_学生作品_编号1.png", "slides/08_学生作品_编号2.png", "slides/09_学生作品_编号3.png"]
     },
 
-    { id:"2-1a", seg:2, ch:"wk", video:"videos/2-1a_wk_extend_work1.mp4",
+    { id:"2-1a", seg:2, ch:"wk", video:"videos/2-1a_wk_extend_shape.mp4",
       say:["延长1号作品","把1号作品的直线延长","1号作品延长","延长一号作品","先看1号作品","延长1号"],
       subtitle:"1号作品的两条直线，向两端延长——相交了！",
       action:"金箍棒指向两条线，双手往前一推，两条线同时向两端延长，交点亮起金光，比出大拇指",
-      course:"1号作品：两条直线向两端延长 → 延长后相交（交点处亮起）",
-      slides:["slides/07_学生作品_编号1.png"]
+      course:"1号作品：两条直线向两端延长 → 延长后相交（交点处亮起）"
     },
 
-    { id:"2-1b", seg:2, ch:"wk", video:"videos/2-1b_wk_extend_work2.mp4",
+    { id:"2-1b", seg:2, ch:"wk", video:"videos/2-1b_wk_extend_shape.mp4",
       say:["延长2号作品","把2号作品的直线延长","2号作品延长","延长二号作品","再看2号作品","延长2号"],
       subtitle:"2号作品的两条直线，向两端延长——还是不相交！",
       action:"金箍棒指向两条平行线，两手向两侧推开，两条线延长到画面外仍不相交，摊手微笑",
-      course:"2号作品：两条平行直线向两端延长 → 始终不相交",
-      slides:["slides/08_学生作品_编号2.png"]
+      course:"2号作品：两条平行直线向两端延长 → 始终不相交"
     },
 
-    { id:"2-1c", seg:2, ch:"wk", video:"videos/2-1c_wk_extend_work3.mp4",
+    { id:"2-1c", seg:2, ch:"wk", video:"videos/2-1c_wk_extend_shape.mp4",
       say:["延长3号作品","把3号作品的直线延长","3号作品延长","延长三号作品","最后看3号作品","延长3号"],
       subtitle:"3号作品的直线，向两端延长——照样相交！",
       action:"金箍棒依次点三条线，三条线同时向两端延长，交点保持不动并更亮，点头微笑",
-      course:"3号作品：三条相交直线向两端延长 → 相交关系不变",
-      slides:["slides/09_学生作品_编号3.png"]
+      course:"3号作品：三条相交直线向两端延长 → 相交关系不变"
     },
 
 
