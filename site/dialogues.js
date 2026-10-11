@@ -178,19 +178,22 @@ window.DIALOGUES = {
       course:"基础层4组直线题板（平行、垂直、延长后相交、斜向垂直）",
       slide:"slides/02_环节五_第一题.png" },
 
-    { id:"5-2", seg:5, ch:"bj", video:"videos/5-2_bj_comment_q1.mp4",
-      say:["八戒点评第一题答案","点评基础题","第一题答案点评","点评练习答案"],
-      subtitle:"第一份答案全对，判断得很准确，垂足也找对了！第二份答案中，这一组直线其实是相交的，因为延长后会相交。猴哥，你说是不是？",
-      action:"扛钉耙指屏，摸肚子",
-      course:"投屏典型答案，延长后相交的一组高亮",
-      slides:["slides/12_第一题_答案一.png", "slides/13_第一题_答案二.png"]
+        { id:"5-2a", seg:5, ch:"bj", video:"videos/5-2a_bj_comment_ans1.mp4",
+      say:["八戒点评第一份答案","点评第一份答案","第一份答案对不对","点评第一份"],
+      subtitle:"第一份答案全对，判断得很准确，垂足也找对了！",
+      action:"钉耙指向第一份答案，点头称赞，竖大拇指",
+      course:"12_第一题_答案一.png",
+      slides:["slides/12_第一题_答案一.png"]
     },
 
-    { id:"5-3", seg:5, ch:"wk", video:"videos/5-3_wk_agree.mp4",
-      say:["悟空八戒说得对","没错八戒说得对","猴哥你说是不是","悟空插话没错"],
-      subtitle:"没错，八戒说得对！",
-      action:"从左侧翻筋斗云跳出，金箍棒杵地",
-      course:"—" },
+    { id:"5-2b", seg:5, ch:"bj", video:"videos/5-2b_bj_comment_ans2.mp4",
+      say:["点评第二份答案","八戒点评第二份","第二份答案对不对","点评第二份"],
+      subtitle:"第二份答案中，这一组直线其实是相交的，因为延长后会相交。猴哥，你说是不是？",
+      action:"指着第二份答案摇头指出问题，最后看向悟空",
+      course:"13_第一题_答案二.png",
+      slides:["slides/13_第一题_答案二.png"]
+    },
+
 
     { id:"5-4", seg:5, ch:"bj", video:"videos/5-4_bj_q2_judge.mp4",
       say:["八戒请出第二题","出第二题","第二题","判断题","判断对错"],
