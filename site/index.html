@@ -105,6 +105,9 @@
   .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
     background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
   .slide-badge.show{display:block;}
+  #bufTip{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:42;display:none;
+    padding:6px 18px;border-radius:999px;background:rgba(10,14,24,.8);border:1px solid rgba(255,255,255,.25);
+    color:#dbe6f7;font-size:13px;letter-spacing:1px;}
   #navBtns{position:fixed;left:14px;bottom:14px;z-index:41;display:none;gap:8px;align-items:center;}
   #navBtns.show{display:flex;}
   #navBtns button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.22);
@@ -128,6 +131,7 @@
     <div class="heard" id="heard"></div>
   </div>
 
+  <div id="bufTip">加载中…</div>
   <div class="navbtns" id="navBtns">
     <button id="prevSeg" title="上一段（←）">◀ 上一段</button>
     <span id="segIdx">0 / 0</span>
@@ -225,6 +229,48 @@ window.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){ nextEntry(1); e.preventDefault(); }
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){ nextEntry(-1); e.preventDefault(); }
 });
+
+/* ---------- 预加载：把后面几段提前拉进浏览器缓存，切换即播 ---------- */
+const AHEAD=3, WARM_MAX=8;
+const warmers=new Map();
+function warm(src){
+  if(!src || warmers.has(src)) return;
+  const v=document.createElement('video');
+  v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
+  document.body.appendChild(v);
+  try{ v.load(); }catch(_){}
+  warmers.set(src,v);
+  if(warmers.size>WARM_MAX){
+    const k=warmers.keys().next().value;
+    if(k!==src){
+      const el=warmers.get(k); warmers.delete(k);
+      try{ el.removeAttribute('src'); el.load(); }catch(_){}
+      el.remove();
+    }
+  }
+}
+function preloadAround(i){
+  if(!CFG) return;
+  warm(CFG.idle);
+  const its=CFG.items||[];
+  for(let k=1;k<=AHEAD;k++){ const it=its[i+k]; if(it) warm(it.video); }
+  if(its[i-1]) warm(its[i-1].video);
+  for(let k=1;k<=2;k++){                       // 顺手预载下一两段的课件图
+    const it=its[i+k]; if(!it) continue;
+    const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
+    sl.forEach(s=>{ const im=new Image(); im.src=s; });
+  }
+}
+function warmAll(){
+  if(!CFG) return;
+  if(CFG.entrance&&CFG.entrance.video) warm(CFG.entrance.video);
+  warm(CFG.idle);
+  if(CFG.fallback){ if(CFG.fallback.wk) warm(CFG.fallback.wk.video); if(CFG.fallback.bj) warm(CFG.fallback.bj.video); }
+  preloadAround(-1);
+}
+player.addEventListener('waiting',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='block'; });
+player.addEventListener('playing',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
+player.addEventListener('canplay',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
 function renderSlide(){
   curImg=slideList[slideIdx]||'';
   document.getElementById('pptImg').setAttribute('src',curImg);
@@ -316,7 +362,7 @@ function holdEntry(){
 function playEntry(item){
   if(!item||!item.video) return;
   playing=true; holding=false; curId=item.id||null;
-  curIdx=idxOf(item.id); updateSegHud();
+  curIdx=idxOf(item.id); updateSegHud(); preloadAround(curIdx);
   const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
   if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
@@ -475,7 +521,7 @@ document.getElementById('startBtn').onclick=()=>{
   // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
   if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
   else { goIdle(); }
-  document.getElementById('navBtns').classList.add('show'); updateSegHud();
+  document.getElementById('navBtns').classList.add('show'); updateSegHud(); warmAll();
   if(recog){try{recog.start();micstate.classList.add('live');mictxt.textContent='语音聆听中';}catch(_){}}
   else{document.getElementById('nospeech').style.display='block';document.getElementById('start').style.display='flex';}
 };
