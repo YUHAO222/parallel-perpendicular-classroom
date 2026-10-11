@@ -105,6 +105,12 @@
   .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
     background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
   .slide-badge.show{display:block;}
+  #navBtns{position:fixed;left:14px;bottom:14px;z-index:41;display:none;gap:8px;align-items:center;}
+  #navBtns.show{display:flex;}
+  #navBtns button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.22);
+    border-radius:10px;padding:7px 14px;font-size:14px;}
+  #navBtns button:hover{background:rgba(255,255,255,.2);}
+  #navBtns #segIdx{color:#9fb0cc;font-size:13px;min-width:62px;text-align:center;}
   #holdTip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
     padding:6px 18px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
     color:#ffd88a;font-size:13px;letter-spacing:1px;white-space:nowrap;}
@@ -122,6 +128,11 @@
     <div class="heard" id="heard"></div>
   </div>
 
+  <div class="navbtns" id="navBtns">
+    <button id="prevSeg" title="上一段（←）">◀ 上一段</button>
+    <span id="segIdx">0 / 0</span>
+    <button id="nextSeg" title="下一段（→ / 空格 / 点画面）">下一段 ▶</button>
+  </div>
   <div class="slide-badge" id="slideBadge" title="点击可再次调出课件">课件</div>
   <div id="pptWin">
     <div class="pptbar" id="pptBar">
@@ -146,7 +157,8 @@
   <div class="start" id="start">
     <h2>《平行与垂直》双智能体课堂</h2>
     <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
-       开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。</p>
+       开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
+      讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。</p>
     <button class="btn" id="startBtn">进入课堂</button>
     <p class="nospeech" id="nospeech" style="display:none;">
       当前浏览器不支持离线语音识别（需 Chrome/Edge）。不影响使用：请用右下角控制台按环节点击播放。
@@ -164,7 +176,7 @@ const micstate=document.getElementById('micstate'),mictxt=document.getElementByI
 const CH_NAME={wk:'孙悟空',bj:'猪八戒',both:'双人'};
 const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相交',3:'环节三 · 同一平面',
                 4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
-let playing=false, started=false, recog=null;
+let playing=false, started=false, recog=null, curIdx=-1;
 
 let slideList=[], slideIdx=0, slideName='课件', curImg='';
 
@@ -186,6 +198,33 @@ function keepPlaying(){
   }catch(e){}
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) keepPlaying(); });
+
+/* ---------- 片段导航：点画面 / →← / 按钮 切换下一段 ---------- */
+function idxOf(id){ return (CFG&&CFG.items)?CFG.items.findIndex(x=>x.id===id):-1; }
+function nextEntry(d){
+  if(!CFG||!CFG.items||!CFG.items.length) return;
+  let i = (curIdx<0) ? (d>0?0:0) : curIdx+d;
+  i = Math.max(0, Math.min(CFG.items.length-1, i));
+  const it=CFG.items[i];
+  if(it) playEntry(it);
+}
+function updateSegHud(){
+  const n=(CFG&&CFG.items)?CFG.items.length:0;
+  const el=document.getElementById('segIdx');
+  if(el) el.textContent = (curIdx>=0? (curIdx+1) : 0) + ' / ' + n;
+}
+document.addEventListener('click',e=>{
+  if(!started) return;
+  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge')) return;
+  if(document.getElementById('pptWin').classList.contains('show')) return;   // 课件窗口开着时点画面=课件翻页
+  nextEntry(1);
+}, true);
+window.addEventListener('keydown',e=>{
+  if(!started) return;
+  if(document.getElementById('pptWin').classList.contains('show')) return;   // 交给课件窗口的快捷键
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){ nextEntry(1); e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ nextEntry(-1); e.preventDefault(); }
+});
 function renderSlide(){
   curImg=slideList[slideIdx]||'';
   document.getElementById('pptImg').setAttribute('src',curImg);
@@ -277,6 +316,7 @@ function holdEntry(){
 function playEntry(item){
   if(!item||!item.video) return;
   playing=true; holding=false; curId=item.id||null;
+  curIdx=idxOf(item.id); updateSegHud();
   const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
   if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
@@ -435,6 +475,7 @@ document.getElementById('startBtn').onclick=()=>{
   // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
   if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
   else { goIdle(); }
+  document.getElementById('navBtns').classList.add('show'); updateSegHud();
   if(recog){try{recog.start();micstate.classList.add('live');mictxt.textContent='语音聆听中';}catch(_){}}
   else{document.getElementById('nospeech').style.display='block';document.getElementById('start').style.display='flex';}
 };
@@ -443,6 +484,8 @@ document.getElementById('startBtn').onclick=()=>{
 document.getElementById('openPptBtn').onclick=()=>{
   window.open('viewer.html','pptdeck','width=1280,height=780,menubar=no,toolbar=no');
 };
+document.getElementById('nextSeg').onclick=e=>{e.stopPropagation();nextEntry(1);};
+document.getElementById('prevSeg').onclick=e=>{e.stopPropagation();nextEntry(-1);};
 document.getElementById('panelToggle').onclick=()=>{
   document.getElementById('panel').classList.toggle('open');
 };
