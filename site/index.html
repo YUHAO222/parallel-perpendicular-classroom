@@ -292,43 +292,50 @@ function setWarmLine(txt, done){
   const box=document.getElementById('warmLine'); if(box) box.classList.toggle('done', !!done);
   const b=document.getElementById('startBtn'); if(b) b.textContent = done ? '开始上课 ✓' : '进入课堂';
 }
+function dlOne(src){
+  return new Promise(res=>{
+    if(!src||warmers.has(src)) return res();
+    const v=document.createElement('video');
+    v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
+    document.body.appendChild(v); warmers.set(src,v);
+    let fin=false; const done=()=>{ if(fin) return; fin=true; res(); };
+    v.addEventListener('canplaythrough',done); v.addEventListener('loadeddata',done);
+    v.addEventListener('error',done); setTimeout(done, 25000);
+  });
+}
+function dlImg(src){
+  return new Promise(res=>{ const im=new Image(); im.onload=im.onerror=()=>res(); im.src=src; setTimeout(res,12000); });
+}
+async function pool(list, conc, tick){
+  let i=0, done=0;
+  const worker=async()=>{ while(i<list.length){ const s=list[i++]; await dlOne(s); done++; if(tick) tick(done); } };
+  await Promise.all(Array.from({length:Math.max(1,conc)}, worker));
+}
 function warmAllClips(){
   if(!CFG || warming) return;
-  const list=[];
-  if(CFG.entrance&&CFG.entrance.video) list.push(CFG.entrance.video);
-  if(CFG.idle) list.push(CFG.idle);
-  (CFG.items||[]).forEach(it=>{ if(it.video) list.push(it.video); });
-  if(CFG.fallback){ if(CFG.fallback.wk) list.push(CFG.fallback.wk.video); if(CFG.fallback.bj) list.push(CFG.fallback.bj.video); }
-  const q=[...new Set(list)].filter(Boolean);
-  const imgs=[];
-  (CFG.items||[]).forEach(it=>{
-    const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
-    sl.forEach(s=>imgs.push(s));
-  });
-  const http=/^https?:/.test(location.protocol);
   warming=true;
-  let done=0; const total=q.length+imgs.length;
-  const pump=()=>{
-    if(done>=total){ setWarmTip('全部已缓存（'+q.length+' 段视频 / '+imgs.length+' 张课件图）', 6000);
-      setWarmLine('已缓存完毕：'+q.length+' 段视频 / '+imgs.length+' 张课件图 —— 可以上课了', true); warming=false; return; }
-    const batch=q.slice(done, done+(http?4:2));
-    const nb=batch.length;
-    batch.forEach((src,k)=>{
-      if(http){ fetch(src,{cache:'force-cache'}).catch(()=>warm(src,true)).finally(()=>{}); }
-      else { warm(src, true); }
-      done++;
-    });
-    // 视频走完后并行预载课件图
-    if(done>=q.length){
-      imgs.forEach(s=>{ const im=new Image(); im.src=s; });
-      done=total;
-    }
-    setWarmTip('缓存中 '+Math.min(done,total)+' / '+total);
-    setWarmLine('课前缓存中… '+Math.min(done,total)+' / '+total+'（缓存完再进课堂更流畅）', false);
-    setTimeout(pump, http?260:120);
-    void nb;
-  };
-  pump();
+  const items=CFG.items||[];
+  const head=[];
+  if(CFG.entrance&&CFG.entrance.video) head.push(CFG.entrance.video);
+  if(CFG.idle) head.push(CFG.idle);
+  if(CFG.fallback){ if(CFG.fallback.wk) head.push(CFG.fallback.wk.video); if(CFG.fallback.bj) head.push(CFG.fallback.bj.video); }
+  items.slice(0,3).forEach(it=>{ if(it.video) head.push(it.video); });
+  const pri=[...new Set(head)].filter(Boolean);
+  const rest=[...new Set(items.map(it=>it.video).filter(Boolean))].filter(s=>pri.indexOf(s)<0);
+  const imgs=[];
+  items.forEach(it=>{ const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]); sl.forEach(s=>imgs.push(s)); });
+  const gate=pri.length+imgs.length;
+  const cnt=d=>'课前缓存中… '+d+' / '+gate+'（先存开场要用的）';
+  setWarmLine(cnt(0), false);
+  Promise.all([
+    pool(pri, 2, d=>setWarmLine(cnt(d), false)),
+    Promise.all(imgs.map(s=>dlImg(s)))
+  ]).then(()=>{
+    setWarmTip('开场已就绪：'+pri.length+' 段视频 / '+imgs.length+' 张课件图', 6000);
+    setWarmLine('已就绪：可以上课了 ✓ 后台继续缓存其余 '+rest.length+' 段（不影响上课）', true);
+    warming=false;
+    pool(rest, 2, d=>setWarmTip('后台补缓存 '+d+' / '+rest.length));
+  });
 }
 function renderSlide(){
   curImg=slideList[slideIdx]||'';
@@ -640,7 +647,7 @@ function buildPanel(){
 buildPanel();
 if(CFG&&CFG.idle){player.src=CFG.idle;}
 /* 课前缓存：页面一打开就预热全部视频与课件图，等"缓存完毕"再进课堂 */
-setWarmLine('课前缓存中… 准备中', false);
+setWarmLine('课前缓存中… 0 / 7（先存开场要用的）', false);
 warmAllClips();
 </script>
 </body>
