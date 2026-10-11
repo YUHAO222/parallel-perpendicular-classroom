@@ -398,10 +398,25 @@ window.addEventListener('keydown',e=>{
 });
 
 /* ---------- 播放 ---------- */
+/* 动画播放期间暂停语音聆听：否则视频里的配音会被麦克风当成老师口令，导致画面自己乱跳 */
+let listenPaused=false;
+function pauseListen(){
+  listenPaused=true;
+  try{ recog && recog.abort && recog.abort(); }catch(_){}
+  try{ micstate.classList.remove('live'); mictxt.textContent='动画播放中 · 暂停聆听'; }catch(_){}
+}
+function resumeListen(delay){
+  listenPaused=false;
+  if(!started||!recog) return;
+  setTimeout(()=>{ if(listenPaused||!started||!recog) return;
+    try{ recog.start(); micstate.classList.add('live'); mictxt.textContent='语音聆听中'; }catch(_){}
+  }, delay==null?700:delay);
+}
 function playSrc(src,{loop=false,muted=false,onend}={}){
   player.loop=loop; player.muted=muted; player.src=src;
+  if(!muted) pauseListen(); else resumeListen(120);      // 有声动画->停听；待机静音->恢复听
   player.play().catch(()=>{});
-  player.onended=()=>{ if(!player.loop) onend&&onend(); };
+  player.onended=()=>{ if(!player.loop){ resumeListen(900); onend&&onend(); } };
 }
 function goIdle(){
   playing=false; hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
@@ -543,6 +558,8 @@ if(SR){
   recog.maxAlternatives=5;        // 多候选：取命中最好的那个
   let lastHeard='';
   recog.onresult=(e)=>{
+    // 动画正在播放时完全忽略识别结果（视频配音最容易误触）
+    if(listenPaused || (playing && !player.paused)) return;
     let finalTxt=''; const alts=[];
     for(let i=e.resultIndex;i<e.results.length;i++){
       const r=e.results[i];
@@ -563,7 +580,7 @@ if(SR){
       handleText(key, {interim:true});
     }
   };
-  recog.onend=()=>{ try{ if(started) recog.start(); }catch(_){} };
+  recog.onend=()=>{ try{ if(started && !listenPaused) recog.start(); }catch(_){} };
   recog.onerror=(e)=>{
     const err=(e&&e.error)||'';
     if(err==='not-allowed'||err==='service-not-allowed'){
