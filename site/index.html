@@ -105,6 +105,8 @@
   .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
     background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
   .slide-badge.show{display:block;}
+  #warmTip{position:fixed;top:74px;right:22px;z-index:42;display:none;padding:5px 14px;border-radius:999px;
+    background:rgba(10,14,24,.78);border:1px solid rgba(255,176,32,.45);color:#ffd88a;font-size:12px;letter-spacing:1px;}
   #bufTip{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:42;display:none;
     padding:6px 18px;border-radius:999px;background:rgba(10,14,24,.8);border:1px solid rgba(255,255,255,.25);
     color:#dbe6f7;font-size:13px;letter-spacing:1px;}
@@ -132,6 +134,7 @@
   </div>
 
   <div id="bufTip">加载中…</div>
+  <div id="warmTip"></div>
   <div class="navbtns" id="navBtns">
     <button id="prevSeg" title="上一段（←）">◀ 上一段</button>
     <span id="segIdx">0 / 0</span>
@@ -154,7 +157,7 @@
   <div id="holdTip">课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续</div>
   <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
   <div class="panel" id="panel">
-    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
+    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="warmBtn" title="把全部视频与课件图预热到缓存">全部预加载</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
     <div class="scroll" id="scroll"></div>
   </div>
 
@@ -233,14 +236,14 @@ window.addEventListener('keydown',e=>{
 /* ---------- 预加载：把后面几段提前拉进浏览器缓存，切换即播 ---------- */
 const AHEAD=3, WARM_MAX=8;
 const warmers=new Map();
-function warm(src){
+function warm(src, big){
   if(!src || warmers.has(src)) return;
   const v=document.createElement('video');
   v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
   document.body.appendChild(v);
   try{ v.load(); }catch(_){}
   warmers.set(src,v);
-  if(warmers.size>WARM_MAX){
+  if(warmers.size>(big?24:WARM_MAX)){
     const k=warmers.keys().next().value;
     if(k!==src){
       const el=warmers.get(k); warmers.delete(k);
@@ -271,6 +274,50 @@ function warmAll(){
 player.addEventListener('waiting',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='block'; });
 player.addEventListener('playing',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
 player.addEventListener('canplay',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
+
+/* ---------- 全部预加载：整包视频 + 课件图一次预热 ---------- */
+let warming=false;
+function setWarmTip(txt, hold){
+  const el=document.getElementById('warmTip'); if(!el) return;
+  if(txt){ el.textContent=txt; el.style.display='block'; }
+  if(hold){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, hold); }
+}
+function warmAllClips(){
+  if(!CFG || warming) return;
+  const list=[];
+  if(CFG.entrance&&CFG.entrance.video) list.push(CFG.entrance.video);
+  if(CFG.idle) list.push(CFG.idle);
+  (CFG.items||[]).forEach(it=>{ if(it.video) list.push(it.video); });
+  if(CFG.fallback){ if(CFG.fallback.wk) list.push(CFG.fallback.wk.video); if(CFG.fallback.bj) list.push(CFG.fallback.bj.video); }
+  const q=[...new Set(list)].filter(Boolean);
+  const imgs=[];
+  (CFG.items||[]).forEach(it=>{
+    const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
+    sl.forEach(s=>imgs.push(s));
+  });
+  const http=/^https?:/.test(location.protocol);
+  warming=true;
+  let done=0; const total=q.length+imgs.length;
+  const pump=()=>{
+    if(done>=total){ setWarmTip('全部已缓存（'+q.length+' 段视频 / '+imgs.length+' 张课件图）', 6000); warming=false; return; }
+    const batch=q.slice(done, done+(http?4:2));
+    const nb=batch.length;
+    batch.forEach((src,k)=>{
+      if(http){ fetch(src,{cache:'force-cache'}).catch(()=>warm(src,true)).finally(()=>{}); }
+      else { warm(src, true); }
+      done++;
+    });
+    // 视频走完后并行预载课件图
+    if(done>=q.length){
+      imgs.forEach(s=>{ const im=new Image(); im.src=s; });
+      done=total;
+    }
+    setWarmTip('缓存中 '+Math.min(done,total)+' / '+total);
+    setTimeout(pump, http?260:120);
+    void nb;
+  };
+  pump();
+}
 function renderSlide(){
   curImg=slideList[slideIdx]||'';
   document.getElementById('pptImg').setAttribute('src',curImg);
@@ -521,12 +568,13 @@ document.getElementById('startBtn').onclick=()=>{
   // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
   if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
   else { goIdle(); }
-  document.getElementById('navBtns').classList.add('show'); updateSegHud(); warmAll();
+  document.getElementById('navBtns').classList.add('show'); updateSegHud(); warmAll(); warmAllClips();
   if(recog){try{recog.start();micstate.classList.add('live');mictxt.textContent='语音聆听中';}catch(_){}}
   else{document.getElementById('nospeech').style.display='block';document.getElementById('start').style.display='flex';}
 };
 
 /* ---------- 控制台：按环节分组 ---------- */
+document.getElementById('warmBtn').onclick=()=>{ warming=false; warmAllClips(); };
 document.getElementById('openPptBtn').onclick=()=>{
   window.open('viewer.html','pptdeck','width=1280,height=780,menubar=no,toolbar=no');
 };
