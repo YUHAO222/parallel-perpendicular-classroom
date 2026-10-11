@@ -119,6 +119,10 @@
   #holdTip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
     padding:6px 18px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
     color:#ffd88a;font-size:13px;letter-spacing:1px;white-space:nowrap;}
+  .warmline{margin-top:16px;font-size:15px;color:#ffd88a;display:flex;align-items:center;justify-content:center;gap:9px;letter-spacing:.5px;}
+  .warmline .sp{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,216,138,.3);border-top-color:#ffd88a;animation:spin .9s linear infinite;}
+  .warmline.done{color:#8ef0b4;} .warmline.done .sp{display:none;}
+  @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -167,6 +171,7 @@
        开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
       讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。</p>
     <button class="btn" id="startBtn">进入课堂</button>
+    <div class="warmline" id="warmLine"><span class="sp"></span><span id="warmTxt">正在课前缓存…</span></div>
     <p class="nospeech" id="nospeech" style="display:none;">
       当前浏览器不支持离线语音识别（需 Chrome/Edge）。不影响使用：请用右下角控制台按环节点击播放。
     </p>
@@ -282,6 +287,11 @@ function setWarmTip(txt, hold){
   if(txt){ el.textContent=txt; el.style.display='block'; }
   if(hold){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, hold); }
 }
+function setWarmLine(txt, done){
+  const el=document.getElementById('warmTxt'); if(el) el.textContent=txt;
+  const box=document.getElementById('warmLine'); if(box) box.classList.toggle('done', !!done);
+  const b=document.getElementById('startBtn'); if(b) b.textContent = done ? '开始上课 ✓' : '进入课堂';
+}
 function warmAllClips(){
   if(!CFG || warming) return;
   const list=[];
@@ -299,7 +309,8 @@ function warmAllClips(){
   warming=true;
   let done=0; const total=q.length+imgs.length;
   const pump=()=>{
-    if(done>=total){ setWarmTip('全部已缓存（'+q.length+' 段视频 / '+imgs.length+' 张课件图）', 6000); warming=false; return; }
+    if(done>=total){ setWarmTip('全部已缓存（'+q.length+' 段视频 / '+imgs.length+' 张课件图）', 6000);
+      setWarmLine('已缓存完毕：'+q.length+' 段视频 / '+imgs.length+' 张课件图 —— 可以上课了', true); warming=false; return; }
     const batch=q.slice(done, done+(http?4:2));
     const nb=batch.length;
     batch.forEach((src,k)=>{
@@ -313,6 +324,7 @@ function warmAllClips(){
       done=total;
     }
     setWarmTip('缓存中 '+Math.min(done,total)+' / '+total);
+    setWarmLine('课前缓存中… '+Math.min(done,total)+' / '+total+'（缓存完再进课堂更流畅）', false);
     setTimeout(pump, http?260:120);
     void nb;
   };
@@ -610,6 +622,9 @@ function buildPanel(){
 }
 buildPanel();
 if(CFG&&CFG.idle){player.src=CFG.idle;}
+/* 课前缓存：页面一打开就预热全部视频与课件图，等"缓存完毕"再进课堂 */
+setWarmLine('课前缓存中… 准备中', false);
+warmAllClips();
 </script>
 </body>
 </html>
