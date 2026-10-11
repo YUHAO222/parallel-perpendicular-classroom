@@ -276,7 +276,7 @@ function holdEntry(){
 }
 function playEntry(item){
   if(!item||!item.video) return;
-  playing=true; holding=false;
+  playing=true; holding=false; curId=item.id||null;
   const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
   if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
@@ -292,32 +292,141 @@ function playEntry(item){
 }
 
 /* ---------- 语音匹配：按 say 关键词命中最长最多者 ---------- */
-function matchEntry(text){
-  let best=null,bestScore=0;
-  (CFG.items||[]).forEach(it=>{
-    let score=0;
-    (it.say||[]).forEach(k=>{ if(k&&text.includes(k)) score+=k.length; });
-    if(score>bestScore){bestScore=score;best=it;}
-  });
+/* ---------- 语音匹配（多层打分） ----------
+   1) 规范化：去标点/空格、全半角统一、常见同音误识别纠正
+   2) 去口癖词（请/吧/我们/一下…）再算一遍，取分高者
+   3) 每条口令：精确子串 → 最长公共子串(60%) + 2-gram 相似度(40%)
+   4) 返回候选列表（含分数），由调用方决定是否够格、是否需要提示
+------------------------------------------------ */
+const HOMO={'锤足':'垂足','垂组':'垂足','垂族':'垂足','平形':'平行','凭形':'平行','平行线用':'平行线用',
+  '相焦':'相交','直脚':'直角','严长':'延长','廷长':'延长','点平':'点评','输理':'梳理','弥宫':'迷宫','迷供':'迷宫',
+  '屏行':'平行','垂足是':'垂足','长方体':'长方体','图形':'图形','天台':'台','猪八盖':'猪八戒','孙悟天':'孙悟空'};
+const FILL=['请你','请','吧','啊','呀','呢','哦','我们','大家','一下','开始','现在','那个','然后','好的','来','给我','帮我','我要','你能','可以','麻烦'];
+const NUM=[['一号','1号'],['二号','2号'],['三号','3号'],['四号','4号'],['五号','5号'],['一号作品','1号作品']];
+function norm(t){
+  let s=(t||'').replace(/[\s，。！？、；：,.!?;:'"“”‘’（）()【】\[\]—\-…~]/g,'');
+  for(const k in HOMO) s=s.split(k).join(HOMO[k]);
+  NUM.forEach(p=>{ s=s.split(p[0]).join(p[1]); });
+  return s;
+}
+function stripFill(s){
+  let r=s; FILL.forEach(w=>{r=r.split(w).join('');});
+  return r.length>=2 ? r : s;
+}
+function lcsSub(a,b){                       // 最长公共子串
+  const m=a.length,n=b.length; if(!m||!n) return 0;
+  let best=0, prev=new Array(n+1).fill(0);
+  for(let i=1;i<=m;i++){
+    const cur=new Array(n+1).fill(0);
+    for(let j=1;j<=n;j++){ if(a[i-1]===b[j-1]){ cur[j]=prev[j-1]+1; if(cur[j]>best) best=cur[j]; } }
+    prev=cur;
+  }
   return best;
 }
-function handleText(text){
+function bigramSim(a,b){
+  if(a.length<2||b.length<2) return 0;
+  const A=new Set(),B=new Set();
+  for(let i=0;i<a.length-1;i++) A.add(a.slice(i,i+2));
+  for(let i=0;i<b.length-1;i++) B.add(b.slice(i,i+2));
+  let hit=0; A.forEach(x=>{ if(B.has(x)) hit++; });
+  return (2*hit)/(A.size+B.size);
+}
+function scoreNode(it,text,bonusKey){
+  let best=0, tag='';
+  (it.say||[]).forEach(k=>{
+    const K=norm(k); if(!K) return;
+    const direct=(text.includes(K) || K.includes(text)) && text.length>=3;
+    if(direct){ const s=K.length*2.0; if(s>best){ best=s; tag='精确'; } return; }
+    const lcs=lcsSub(text,K)/K.length, bg=bigramSim(text,K);
+    const s=(0.6*lcs+0.4*bg)*K.length;
+    if(s>best){ best=s; tag=`模糊 覆盖${(lcs*100)|0}%/词组${(bg*100)|0}%`; }
+  });
+  return {score:best, tag};
+}
+function matchEntry(textRaw){
+  const t0=norm(textRaw), t=stripFill(t0);
+  const out=[];
+  (CFG.items||[]).forEach(it=>{
+    const a=scoreNode(it,t0), b=scoreNode(it,t);
+    const pick = b.score>a.score ? b : a;
+    if(pick.score>0) out.push({it, score:pick.score, tag:pick.tag});
+  });
+  out.sort((x,y)=>y.score-x.score);
+  return out;
+}
+let curId=null, lastFireAt=0, lastFireId=null;
+const MIN_SCORE=3.0;            // 最终结果的最低分
+const MIN_SCORE_INTERIM=6.5;    // 中间结果需要更高分才抢先触发
+function handleText(text, opts){
+  opts=opts||{};
+  if(!text) return;
   heardEl.textContent='听到：'+text;
-  const hit=matchEntry(text);
-  if(hit){ playEntry(hit); return; }
-  // 仅喊角色名 → 对应兜底
+  const c=matchEntry(text);
+  const min=opts.interim ? MIN_SCORE_INTERIM : MIN_SCORE;
+  if(c.length && c[0].score>=min){
+    const top=c[0], second=c[1];
+    const now=Date.now();
+    // 同一节点 2.5 秒内不重复触发
+    if(top.it.id===lastFireId && now-lastFireAt<2500) return;
+    if(top.it.id===curId){ micstate.classList.add('live'); mictxt.textContent='已在播放「'+top.it.id+'」'; return; }
+    if(second && second.score>top.score*0.9){
+      mictxt.textContent='听成「'+text+'」→ 可能是 '+top.it.id+' / '+second.it.id+'，已播 '+top.it.id;
+    } else {
+      mictxt.textContent='识别：'+top.it.id+' ✓（'+top.tag+'）';
+    }
+    lastFireId=top.it.id; lastFireAt=now;
+    playEntry(top.it);
+    return;
+  }
   if(/悟空|孙悟空/.test(text)){ playEntry(CFG.fallback.wk); return; }
-  if(/八戒|猪八戒/.test(text)){ playEntry(CFG.fallback.bj); }
+  if(/八戒|猪八戒/.test(text)){ playEntry(CFG.fallback.bj); return; }
+  if(c.length){
+    const s=(c[0].it.say||[''])[0];
+    mictxt.textContent='没听清（最接近 '+c[0].it.id+'）→ 可以说「'+s+'」';
+  } else {
+    mictxt.textContent='没听清，请点右下角 ☰ 控制台';
+  }
 }
 
 /* ---------- 浏览器识别（可替换为扣子ASR）---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 if(SR){
-  recog=new SR();recog.lang='zh-CN';recog.continuous=true;recog.interimResults=false;
-  recog.onresult=(e)=>{const t=e.results[e.results.length-1][0].transcript.trim();
-    if(t&&!playing) handleText(t);};
-  recog.onend=()=>{try{if(started)recog.start();}catch(_){}};
-  recog.onerror=()=>{mictxt.textContent='识别受限，请用控制台';};
+  recog=new SR();
+  recog.lang='zh-CN';
+  recog.continuous=true;
+  recog.interimResults=true;      // 边说边识别，响应更快
+  recog.maxAlternatives=5;        // 多候选：取命中最好的那个
+  let lastHeard='';
+  recog.onresult=(e)=>{
+    let finalTxt=''; const alts=[];
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const r=e.results[i];
+      for(let j=0;j<r.length;j++){
+        const t=(r[j].transcript||'').trim();
+        if(t) alts.push(t);
+      }
+      if(r.isFinal) finalTxt+=(r[0].transcript||'');
+    }
+    if(!alts.length) return;
+    // 多个候选按序尝试；同一句话只处理一次
+    const key=alts[0];
+    if(finalTxt.trim()){
+      if(finalTxt.trim()===lastHeard) return;
+      lastHeard=finalTxt.trim();
+      handleText(finalTxt.trim(), {interim:false});
+    } else {
+      handleText(key, {interim:true});
+    }
+  };
+  recog.onend=()=>{ try{ if(started) recog.start(); }catch(_){} };
+  recog.onerror=(e)=>{
+    const err=(e&&e.error)||'';
+    if(err==='not-allowed'||err==='service-not-allowed'){
+      mictxt.textContent='麦克风未授权，请用控制台'; micstate.classList.remove('live'); return;
+    }
+    mictxt.textContent='识别中断，正在重连…';
+    setTimeout(()=>{ try{ if(started) recog.start(); }catch(_){} }, 350);
+  };
 }
 
 document.getElementById('startBtn').onclick=()=>{
