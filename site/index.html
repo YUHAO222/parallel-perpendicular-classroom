@@ -105,6 +105,9 @@
   .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
     background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
   .slide-badge.show{display:block;}
+  #holdTip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
+    padding:6px 18px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
+    color:#ffd88a;font-size:13px;letter-spacing:1px;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -133,6 +136,7 @@
     <div class="ppthint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放</div>
   </div>
 
+  <div id="holdTip">课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续</div>
   <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
   <div class="panel" id="panel">
     <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
@@ -239,6 +243,7 @@ document.getElementById('slideBadge').onclick=()=>{
   const w=document.getElementById('pptWin');
   if(slideList.length){ w.classList.toggle('show'); }
 };
+document.addEventListener('click',e=>{ if(holding && e.target && e.target.id==='goIdleBtn'){ holding=false; } },true);
 window.addEventListener('keydown',e=>{
   const w=document.getElementById('pptWin');
   if(!w.classList.contains('show')) return;
@@ -258,12 +263,24 @@ function goIdle(){
   playing=false; hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
   if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
 }
+/* 有课件的段落：播完停在最后一帧，课件继续留在屏上，等老师下指令才回待机 */
+let holding=false;
+function holdEntry(){
+  playing=false; holding=true;
+  try{ player.pause(); }catch(e){}
+  if(slideList.length){
+    document.getElementById('pptWin').classList.add('show');
+    document.getElementById('slideBadge').classList.add('show');
+  }
+  const h=document.getElementById('holdTip'); if(h) h.style.display='block';
+}
 function playEntry(item){
   if(!item||!item.video) return;
-  playing=true;
+  playing=true; holding=false;
+  const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
   if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
-  playSrc(item.video,{loop:false,muted:false,onend:goIdle});
+  playSrc(item.video,{loop:false,muted:false,onend: _sl ? holdEntry : goIdle});
   if(item.subtitle){
     bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
     whoEl.textContent=(CH_NAME[item.ch]||'')+'：'; replyEl.textContent=item.subtitle;
