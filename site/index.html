@@ -628,7 +628,7 @@ function handleText(text, opts){
  *     动画一停/一静音 立刻恢复，不依赖视频 onended（防卡死）
  * ===================================================================== */
 const ASR_MODEL_URL='asr/model.tar.gz';
-let asrReady=false, asrModel=null, asrRecog=null, audioCtx=null, micStream=null, micSink=null, asrFeed=null, asrDbgEl=null;
+let asrReady=false, asrModel=null, asrRecog=null, audioCtx=null, micStream=null, micSink=null, asrFeed=null, asrDbgEl=null, asrState='';
 window.__lastASR='';
 function audioBusy(){ return !!(player && !player.paused && !player.muted && !player.ended); } // 有【声音】的视频在播=忙
 function asrDbg(){
@@ -639,7 +639,7 @@ function asrDbg(){
       asrDbgEl.onclick=function(){ asrDbgEl.style.display='none'; };
       document.body.appendChild(asrDbgEl); }
     asrDbgEl.textContent='ASR 引擎'+(window.Vosk?'✓':'✗')
-      +' 模型'+(asrReady?'✓':(asrModel?'载入中':'✗'))
+      +' 模型'+(asrReady?'✓':(asrState||'✗'))
       +' 麦'+(micStream?'✓':'✗')
       +' 音频'+(audioCtx?audioCtx.state:'✗')
       +' 停'+(listenPaused?'1':'0')+' 忙'+(audioBusy()?'1':'0')
@@ -648,15 +648,34 @@ function asrDbg(){
 }
 function asrSetLive(txt){ try{ micstate.classList.add('live'); mictxt.textContent=txt||'离线语音聆听中'; }catch(_){} asrDbg(); }
 async function initASR(){
-  if(!window.Vosk){ mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; asrDbg(); return; }
+  if(!window.Vosk){ asrState='无Vosk'; mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; asrDbg(); return; }
+  /* 关键：主线程先 fetch 模型 → Blob → createModel(blobURL)。
+     worker 直接拉取在 GitHub Pages 上会挂起，主线程 fetch 正常。 */
+  let blobUrl=null;
   try{
-    mictxt.textContent='正在加载离线语音模型…（首次约 44MB）'; asrDbg();
-    asrModel = await Vosk.createModel(ASR_MODEL_URL);
+    asrState='下载中'; mictxt.textContent='正在下载离线语音模型…（约44MB）'; asrDbg();
+    const resp = await fetch(ASR_MODEL_URL, {cache:'force-cache'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const total = +(resp.headers.get('content-length')||0);
+    let blob;
+    if(resp.body && resp.body.getReader){
+      const reader=resp.body.getReader(); const chunks=[]; let got=0;
+      for(;;){ const r=await reader.read(); if(r.done) break; chunks.push(r.value); got+=r.value.length;
+        asrState = total ? ('下载'+Math.round(got/total*100)+'%') : '下载中';
+        if(total) mictxt.textContent='正在下载离线语音模型… '+Math.round(got/total*100)+'%';
+        if(total && got>=total) break; }
+      blob=new Blob(chunks,{type:'application/gzip'});
+    } else { blob=await resp.blob(); }
+    blobUrl=URL.createObjectURL(blob);
+  }catch(e){ asrState='下载失败'; mictxt.textContent='离线模型下载失败：'+((e&&e.message)||e); asrDbg(); return; }
+  try{
+    asrState='初始化'; mictxt.textContent='正在初始化语音模型…'; asrDbg();
+    asrModel = await Vosk.createModel(blobUrl);
     asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; asrDbg(); });
-    asrReady = true; asrDbg();
+    asrReady = true; asrState=''; asrDbg();
     startVoskMic();
   }catch(e){
-    mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
+    asrState='加载失败'; mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
   }
 }
 function startVoskMic(){
