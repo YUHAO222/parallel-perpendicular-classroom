@@ -5,11 +5,17 @@
 <script>
 function report(s){ document.title=s; var l=document.getElementById('log'); if(l) l.textContent=s; }
 report('js:'+(typeof Vosk));
-try{
-  Vosk.createModel('asr/model.tar.gz').then(function(m){
-    report('MODEL_OK');
-    try{ new m.KaldiRecognizer(); report('RECOG_OK'); }catch(e){ report('RECOG_ERR:'+((e&&e.message)||e)); }
-  }).catch(function(e){ report('MODEL_ERR:'+((e&&e.message)||e)); });
-}catch(e){ report('EXC:'+((e&&e.message)||e)); }
+report('fetching...');
+fetch('asr/model.tar.gz').then(function(r){
+  report('RESP:'+r.status);
+  return r.arrayBuffer();
+}).then(function(b){
+  report('FETCH_OK:'+b.byteLength);
+  try{
+    var url=URL.createObjectURL(new Blob([b]));
+    Vosk.createModel(url).then(function(m){ report('MODEL_OK_blob'); })
+      .catch(function(e){ report('MODEL_ERR_blob:'+((e&&e.message)||e)); });
+  }catch(e){ report('BLOB_ERR:'+((e&&e.message)||e)); }
+}).catch(function(e){ report('FETCH_ERR:'+((e&&e.message)||e)); });
 </script>
 </body></html>
