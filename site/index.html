@@ -498,17 +498,19 @@ function bigramSim(a,b){
   let hit=0; A.forEach(x=>{ if(B.has(x)) hit++; });
   return (2*hit)/(A.size+B.size);
 }
-function scoreNode(it,text,bonusKey){
-  let best=0, tag='';
+function scoreNode(it,text){
+  let best=0, conf=0, tag='', kw='';
   (it.say||[]).forEach(k=>{
     const K=norm(k); if(!K) return;
     const direct=(text.includes(K) || K.includes(text)) && text.length>=3;
-    if(direct){ const s=K.length*2.0; if(s>best){ best=s; tag='精确'; } return; }
+    if(direct){ const s=K.length*2.0; if(s>best){ best=s; conf=1.0; tag='精确'; kw=k; } return; }
     const lcs=lcsSub(text,K)/K.length, bg=bigramSim(text,K);
-    const s=(0.6*lcs+0.4*bg)*K.length;
-    if(s>best){ best=s; tag=`模糊 覆盖${(lcs*100)|0}%/词组${(bg*100)|0}%`; }
+    const lf=Math.min(1, Math.max(0.5, (K.length-1)/5));   // 关键词越短越不可靠，模糊命中降权
+    const c=(0.6*lcs+0.4*bg)*lf;                            // 0..1 置信度(概率)
+    const s=c*K.length;                                     // 排序分
+    if(s>best){ best=s; conf=c; tag=`模糊 覆盖${(lcs*100)|0}% 词组${(bg*100)|0}%`; kw=k; }
   });
-  return {score:best, tag};
+  return {score:best, conf:conf, tag:tag, kw:kw};
 }
 function matchEntry(textRaw){
   const t0=norm(textRaw), t=stripFill(t0);
@@ -516,43 +518,50 @@ function matchEntry(textRaw){
   (CFG.items||[]).forEach(it=>{
     const a=scoreNode(it,t0), b=scoreNode(it,t);
     const pick = b.score>a.score ? b : a;
-    if(pick.score>0) out.push({it, score:pick.score, tag:pick.tag});
+    if(pick.score>0) out.push({it:it, score:pick.score, conf:pick.conf, tag:pick.tag, kw:pick.kw});
   });
   out.sort((x,y)=>y.score-x.score);
   return out;
 }
+/* 回声过滤：识别内容≈智能体台词 → 判为"视频自身声音"，忽略（防视频配音误触发） */
+function isAgentLine(text){
+  const t=norm(text); if(t.length<6) return false; let hit=false;
+  (CFG.items||[]).forEach(it=>{ const s=norm(it.subtitle||''); if(!s) return;
+    if(s.length>=8 && t.indexOf(s)>=0) hit=true;
+    if(bigramSim(t,s)>0.75) hit=true; });
+  ['wk','bj'].forEach(k=>{ const s=norm(((CFG.fallback||{})[k]||{}).subtitle||'');
+    if(s.length>=8 && t.indexOf(s)>=0) hit=true; });
+  return hit;
+}
 let curId=null, lastFireAt=0, lastFireId=null;
-const MIN_SCORE=3.0;            // 最终结果的最低分
+const MIN_SCORE=3.0;            // 排序分下限
 const MIN_SCORE_INTERIM=6.5;    // 中间结果需要更高分才抢先触发
+const MIN_CONF=0.50;            // 置信度(概率)下限 0..1：双阈值，低于它一律不执行（可调 0.4~0.7）
+function agentOf(it){ return CH_NAME[it.ch]||'双人'; }
 function handleText(text, opts){
   opts=opts||{};
   if(!text) return;
-  heardEl.textContent='听到：'+text;
   const c=matchEntry(text);
   const min=opts.interim ? MIN_SCORE_INTERIM : MIN_SCORE;
-  if(c.length && c[0].score>=min){
-    const top=c[0], second=c[1];
+  const top=c[0];
+  // 双阈值判断：排序分够 + 置信度(概率)够 → 才执行
+  if(top && top.score>=min && top.conf>=MIN_CONF){
     const now=Date.now();
-    // 同一节点 2.5 秒内不重复触发
-    if(top.it.id===lastFireId && now-lastFireAt<2500) return;
+    if(top.it.id===lastFireId && now-lastFireAt<2500) return;   // 同一节点2.5s内不重复
     if(top.it.id===curId){ micstate.classList.add('live'); mictxt.textContent='已在播放「'+top.it.id+'」'; return; }
-    if(second && second.score>top.score*0.9){
-      mictxt.textContent='听成「'+text+'」→ 可能是 '+top.it.id+' / '+second.it.id+'，已播 '+top.it.id;
-    } else {
-      mictxt.textContent='识别：'+top.it.id+' ✓（'+top.tag+'）';
-    }
     lastFireId=top.it.id; lastFireAt=now;
+    const pct=Math.round(top.conf*100);
+    heardEl.textContent='听到：'+text+'　→　指挥【'+agentOf(top.it)+'】执行【'+top.it.id+'】　置信度 '+pct+'% ✅';
+    mictxt.textContent='识别：'+agentOf(top.it)+' · '+top.it.id+' · 置信度 '+pct+'%（'+top.tag+'）';
     playEntry(top.it);
     return;
   }
   if(/悟空|孙悟空/.test(text)){ playEntry(CFG.fallback.wk); return; }
   if(/八戒|猪八戒/.test(text)){ playEntry(CFG.fallback.bj); return; }
-  if(c.length){
-    const s=(c[0].it.say||[''])[0];
-    mictxt.textContent='没听清（最接近 '+c[0].it.id+'）→ 可以说「'+s+'」';
-  } else {
-    mictxt.textContent='没听清，请点右下角 ☰ 控制台';
-  }
+  const pct = top ? Math.round(top.conf*100) : 0;
+  heardEl.textContent='听到：'+text+'　→　置信度 '+pct+'%（低于 '+Math.round(MIN_CONF*100)+'% 阈值，未执行 ❌ 请再说一次）';
+  if(top){ const s2=(top.it.say||[''])[0]; mictxt.textContent='没听清（最接近 '+top.it.id+' · '+pct+'%）→ 可以说「'+s2+'」'; }
+  else { mictxt.textContent='没听清，请点右下角 ☰ 控制台'; }
 }
 
 /* ---------- 浏览器识别（可替换为扣子ASR）---------- */
@@ -582,8 +591,10 @@ if(SR){
     if(finalTxt.trim()){
       if(finalTxt.trim()===lastHeard) return;
       lastHeard=finalTxt.trim();
+      if(isAgentLine(finalTxt.trim())) return;       // 回声过滤
       handleText(finalTxt.trim(), {interim:false});
     } else {
+      if(isAgentLine(key)) return;                   // 回声过滤
       handleText(key, {interim:true});
     }
   };
