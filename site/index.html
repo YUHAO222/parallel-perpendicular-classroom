@@ -1,773 +1,1546 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>平行与垂直 · 双智能体课堂</title>
-<style>
-  :root{
-    --wk:#ffb020; --bj:#5fb8ff; --both:#ffe9a8;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;overflow:hidden;background:#000;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#fff;}
-  body{user-select:none;}
-
-  /* ===== 整屏视频 ===== */
-  .screen{position:fixed;inset:0;background:#000;overflow:hidden;}
-  video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;}
-
-  header{position:fixed;top:0;left:0;right:0;z-index:20;text-align:center;padding:18px 16px 0;
-    pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.45),transparent);}
-  header h1{font-size:clamp(20px,2.8vw,34px);letter-spacing:5px;font-weight:800;
-    background:linear-gradient(90deg,var(--wk),#ffe9a8,var(--bj));
-    -webkit-background-clip:text;background-clip:text;color:transparent;}
-
-  .micstate{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:21;
-    display:flex;align-items:center;gap:8px;font-size:13px;color:#c3cfe4;
-    background:rgba(0,0,0,.32);padding:5px 13px;border-radius:999px;}
-  .dot{width:9px;height:9px;border-radius:50%;background:#5b6b86;}
-  .micstate.live .dot{background:#37e08a;box-shadow:0 0 12px #37e08a;animation:pulse 1.2s infinite;}
-  @keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.4);opacity:.6;}}
-
-  .speaker-tag{position:fixed;top:70px;left:22px;z-index:21;display:none;
-    padding:7px 16px;border-radius:999px;font-weight:800;letter-spacing:2px;font-size:15px;
-    background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px);}
-  .speaker-tag[data-ch="wk"]{color:var(--wk);border-color:var(--wk);}
-  .speaker-tag[data-ch="bj"]{color:var(--bj);border-color:var(--bj);}
-  .speaker-tag[data-ch="both"]{color:var(--both);}
-
-  /* 字幕 */
-  .subs{position:fixed;left:50%;bottom:clamp(20px,4.5vh,48px);transform:translateX(-50%);
-    width:min(92vw,1100px);z-index:20;text-align:center;pointer-events:none;}
-  .bubble{display:none;padding:14px 26px;border-radius:15px;line-height:1.6;
-    background:rgba(8,12,24,.7);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);
-    font-size:clamp(15px,1.9vw,24px);box-shadow:0 10px 26px rgba(0,0,0,.45);}
-  .bubble .who{font-weight:800;margin-right:9px;}
-  .bubble[data-ch="wk"] .who{color:var(--wk);}
-  .bubble[data-ch="bj"] .who{color:var(--bj);}
-  .bubble[data-ch="both"] .who{color:var(--both);}
-  .heard{margin-top:9px;font-size:clamp(11px,1.3vw,15px);color:#9fb0cc;min-height:18px;}
-
-  /* 开场遮罩 */
-  .start{position:fixed;inset:0;z-index:60;background:rgba(6,10,20,.94);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;}
-  .start h2{font-size:clamp(22px,3.6vw,40px);letter-spacing:3px;}
-  .start p{color:#a9b8d2;max-width:620px;line-height:1.8;font-size:15px;}
-  .btn{cursor:pointer;border:none;border-radius:999px;padding:15px 44px;font-size:19px;font-weight:800;letter-spacing:2px;color:#1a1206;
-    background:linear-gradient(90deg,var(--wk),#ffd76b);box-shadow:0 10px 30px rgba(255,180,40,.4);transition:transform .2s;}
-  .btn:active{transform:scale(.96);}
-  .nospeech{color:#ff9c7a;font-size:13px;max-width:540px;line-height:1.7;}
-
-  /* ===== 教师控制台（可收起，投屏时几乎不可见）===== */
-  .panel-toggle{position:fixed;right:14px;bottom:14px;z-index:45;cursor:pointer;
-    width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);
-    background:rgba(14,22,40,.78);backdrop-filter:blur(6px);color:#dbe6f7;font-size:20px;}
-  .panel{position:fixed;right:14px;bottom:70px;z-index:44;width:min(360px,86vw);max-height:74vh;
-    display:none;flex-direction:column;gap:8px;overflow:hidden;
-    background:rgba(10,16,30,.86);border:1px solid rgba(255,255,255,.14);border-radius:16px;backdrop-filter:blur(10px);}
-  .panel.open{display:flex;}
-  .panel .bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,.1);}
-  .panel .bar b{font-size:14px;letter-spacing:1px;}
-  .panel .bar .idlebtn{cursor:pointer;font-size:12px;color:#cdd8ea;border:1px solid rgba(255,255,255,.2);
-    padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.06);}
-  .scroll{overflow:auto;padding:6px 10px 12px;display:flex;flex-direction:column;gap:10px;}
-  .seg-grp{display:flex;flex-direction:column;gap:5px;}
-  .seg-label{font-size:12px;color:#9fb0d0;letter-spacing:1px;padding:2px 4px;position:sticky;top:0;
-    background:rgba(10,16,30,.9);padding:4px;}
-  .seg-grp button{cursor:pointer;text-align:left;border:1px solid rgba(255,255,255,.12);color:#e6edf8;
-    background:rgba(255,255,255,.05);border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.4;}
-  .seg-grp button:active{transform:scale(.98);}
-  .seg-grp button.wk{border-left:3px solid var(--wk);}
-  .seg-grp button.bj{border-left:3px solid var(--bj);}
-  .seg-grp button.both{border-left:3px solid var(--both);}
-  .seg-grp button .k{display:block;color:#8fa0c6;font-size:11px;margin-top:2px;}
-
-  /* ===== 课件（PPT 弹窗）===== */
-  #pptWin{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);z-index:40;display:none;
-    flex-direction:column;width:min(1080px,88vw);height:min(710px,80vh);min-width:400px;min-height:260px;
-    resize:both;overflow:hidden;border-radius:14px;border:1px solid rgba(255,255,255,.16);
-    background:#0b1220;box-shadow:0 26px 80px rgba(0,0,0,.72);}
-  #pptWin.show{display:flex;}
-  .pptbar{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:move;user-select:none;
-    background:linear-gradient(180deg,rgba(255,176,32,.22),rgba(255,176,32,.05));
-    border-bottom:1px solid rgba(255,255,255,.12);}
-  .pptbar b{font-size:14px;letter-spacing:1px;color:#ffd88a;white-space:nowrap;}
-  .pptbar .pg{font-size:12px;color:#9fb0cc;white-space:nowrap;}
-  .pptbar .grow{flex:1;}
-  .pptbar button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.18);
-    border-radius:8px;padding:3px 10px;font-size:13px;line-height:1.5;}
-  .pptbar button:hover{background:rgba(255,255,255,.2);}
-  #pptWin .pptbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:6px;
-    background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.06),transparent 70%);}
-  #pptWin .pptbody img{max-width:100%;max-height:100%;border-radius:8px;}
-  #pptWin .ppthint{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:12px;color:#8ea0c4;
-    padding:3px;background:linear-gradient(0deg,rgba(0,0,0,.5),transparent);pointer-events:none;}
-  .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
-    background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
-  .slide-badge.show{display:block;}
-  #warmTip{position:fixed;top:74px;right:22px;z-index:42;display:none;padding:5px 14px;border-radius:999px;
-    background:rgba(10,14,24,.78);border:1px solid rgba(255,176,32,.45);color:#ffd88a;font-size:12px;letter-spacing:1px;}
-  #bufTip{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:42;display:none;
-    padding:6px 18px;border-radius:999px;background:rgba(10,14,24,.8);border:1px solid rgba(255,255,255,.25);
-    color:#dbe6f7;font-size:13px;letter-spacing:1px;}
-  #navBtns{position:fixed;left:14px;bottom:14px;z-index:41;display:none;gap:8px;align-items:center;}
-  #navBtns.show{display:flex;}
-  #navBtns button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.22);
-    border-radius:10px;padding:7px 14px;font-size:14px;}
-  #navBtns button:hover{background:rgba(255,255,255,.2);}
-  #navBtns #segIdx{color:#9fb0cc;font-size:13px;min-width:62px;text-align:center;}
-  #holdTip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
-    padding:6px 18px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
-    color:#ffd88a;font-size:13px;letter-spacing:1px;white-space:nowrap;}
-  .warmline{margin-top:16px;font-size:15px;color:#ffd88a;display:flex;align-items:center;justify-content:center;gap:9px;letter-spacing:.5px;}
-  .warmline .sp{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,216,138,.3);border-top-color:#ffd88a;animation:spin .9s linear infinite;}
-  .warmline.done{color:#8ef0b4;} .warmline.done .sp{display:none;}
-  @keyframes spin{to{transform:rotate(360deg)}}
-</style>
-</head>
-<body>
-  <div class="screen"><video id="player" src="" muted playsinline autoplay loop></video></div>
-
-  <header><h1>平 行 与 垂 直</h1></header>
-  <div class="speaker-tag" id="speakerTag"></div>
-  <div class="micstate" id="micstate"><span class="dot"></span><span id="mictxt">语音未启动</span></div>
-
-  <div class="subs">
-    <div class="bubble" id="bubble"><span class="who" id="who"></span><span id="reply"></span></div>
-    <div class="heard" id="heard"></div>
-  </div>
-
-  <div id="bufTip">加载中…</div>
-  <div id="warmTip"></div>
-  <div class="navbtns" id="navBtns">
-    <button id="prevSeg" title="上一段（←）">◀ 上一段</button>
-    <span id="segIdx">0 / 0</span>
-    <button id="nextSeg" title="下一段（→ / 空格 / 点画面）">下一段 ▶</button>
-  </div>
-  <div class="slide-badge" id="slideBadge" title="点击可再次调出课件">课件</div>
-  <div id="pptWin">
-    <div class="pptbar" id="pptBar">
-      <b id="pptName">课件</b><span class="pg" id="pptPage"></span><span class="grow"></span>
-      <button id="pptPrev" title="上一页（←）">◀</button>
-      <button id="pptNext" title="下一页（→ 或空格）">▶</button>
-      <button id="pptFull" title="全屏 / 还原（F）">全屏</button>
-      <button id="pptPop" title="在新窗口打开完整 PPT（可拖到副屏）">新窗口</button>
-      <button id="pptClose" title="收起（Esc）">✕</button>
-    </div>
-    <div class="pptbody" id="pptBody"><img id="pptImg" alt="课件"></div>
-    <div class="ppthint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放</div>
-  </div>
-
-  <div id="holdTip">课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续</div>
-  <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
-  <div class="panel" id="panel">
-    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="warmBtn" title="把全部视频与课件图预热到缓存">全部预加载</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
-    <div class="scroll" id="scroll"></div>
-  </div>
-
-  <div class="start" id="start">
-    <h2>《平行与垂直》双智能体课堂</h2>
-    <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
-       开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
-      讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。</p>
-    <button class="btn" id="startBtn">进入课堂</button>
-    <div class="warmline" id="warmLine"><span class="sp"></span><span id="warmTxt">正在课前缓存…</span></div>
-    <p class="nospeech" id="nospeech" style="display:none;">
-      当前浏览器不支持离线语音识别（需 Chrome/Edge）。不影响使用：请用右下角控制台按环节点击播放。
-    </p>
-  </div>
-
-<script src="asr/vosk.js"></script>
-<script src="dialogues.js"></script>
-<script>
-const CFG=window.DIALOGUES;
-const player=document.getElementById('player');
-const bubble=document.getElementById('bubble'),whoEl=document.getElementById('who'),
-      replyEl=document.getElementById('reply'),heardEl=document.getElementById('heard');
-const speakerTag=document.getElementById('speakerTag');
-const micstate=document.getElementById('micstate'),mictxt=document.getElementById('mictxt');
-const CH_NAME={wk:'孙悟空',bj:'猪八戒',both:'双人'};
-const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相交',3:'环节三 · 同一平面',
-                4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
-let playing=false, started=false, recog=null, curIdx=-1;
-
-let slideList=[], slideIdx=0, slideName='课件', curImg='';
-
-function showSlides(list, name){
-  list=(list||[]).filter(Boolean);
-  if(!list.length){ hideSlide(); return; }
-  slideList=list; slideIdx=0;
-  if(name) slideName=name;
-  document.getElementById('pptName').textContent=slideName;
-  document.getElementById('pptWin').classList.add('show');
-  document.getElementById('slideBadge').classList.add('show');
-  renderSlide();
-  keepPlaying();
-}
-/* 弹课件时不让动画/配音停：只要在播流程中就续播 */
-function keepPlaying(){
-  try{
-    if(typeof player!=='undefined' && player && player.paused && player.getAttribute('src')) player.play().catch(()=>{});
-  }catch(e){}
-}
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) keepPlaying(); });
-
-/* ---------- 片段导航：点画面 / →← / 按钮 切换下一段 ---------- */
-function idxOf(id){ return (CFG&&CFG.items)?CFG.items.findIndex(x=>x.id===id):-1; }
-function nextEntry(d){
-  if(!CFG||!CFG.items||!CFG.items.length) return;
-  let i = (curIdx<0) ? (d>0?0:0) : curIdx+d;
-  i = Math.max(0, Math.min(CFG.items.length-1, i));
-  const it=CFG.items[i];
-  if(it) playEntry(it);
-}
-function updateSegHud(){
-  const n=(CFG&&CFG.items)?CFG.items.length:0;
-  const el=document.getElementById('segIdx');
-  if(el) el.textContent = (curIdx>=0? (curIdx+1) : 0) + ' / ' + n;
-}
-document.addEventListener('click',e=>{
-  if(!started) return;
-  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge')) return;
-  if(document.getElementById('pptWin').classList.contains('show')) return;   // 课件窗口开着时点画面=课件翻页
-  nextEntry(1);
-}, true);
-window.addEventListener('keydown',e=>{
-  if(!started) return;
-  if(document.getElementById('pptWin').classList.contains('show')) return;   // 交给课件窗口的快捷键
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){ nextEntry(1); e.preventDefault(); }
-  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ nextEntry(-1); e.preventDefault(); }
-});
-
-/* ---------- 预加载：把后面几段提前拉进浏览器缓存，切换即播 ---------- */
-const AHEAD=3, WARM_MAX=8;
-const warmers=new Map();
-function warm(src, big){
-  if(!src || warmers.has(src)) return;
-  const v=document.createElement('video');
-  v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
-  document.body.appendChild(v);
-  try{ v.load(); }catch(_){}
-  warmers.set(src,v);
-  if(warmers.size>(big?24:WARM_MAX)){
-    const k=warmers.keys().next().value;
-    if(k!==src){
-      const el=warmers.get(k); warmers.delete(k);
-      try{ el.removeAttribute('src'); el.load(); }catch(_){}
-      el.remove();
-    }
-  }
-}
-function preloadAround(i){
-  if(!CFG) return;
-  warm(CFG.idle);
-  const its=CFG.items||[];
-  for(let k=1;k<=AHEAD;k++){ const it=its[i+k]; if(it) warm(it.video); }
-  if(its[i-1]) warm(its[i-1].video);
-  for(let k=1;k<=2;k++){                       // 顺手预载下一两段的课件图
-    const it=its[i+k]; if(!it) continue;
-    const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
-    sl.forEach(s=>{ const im=new Image(); im.src=s; });
-  }
-}
-function warmAll(){
-  if(!CFG) return;
-  if(CFG.entrance&&CFG.entrance.video) warm(CFG.entrance.video);
-  warm(CFG.idle);
-  if(CFG.fallback){ if(CFG.fallback.wk) warm(CFG.fallback.wk.video); if(CFG.fallback.bj) warm(CFG.fallback.bj.video); }
-  preloadAround(-1);
-}
-player.addEventListener('waiting',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='block'; });
-player.addEventListener('playing',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
-player.addEventListener('canplay',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
-
-/* ---------- 全部预加载：整包视频 + 课件图一次预热 ---------- */
-let warming=false;
-function setWarmTip(txt, hold){
-  const el=document.getElementById('warmTip'); if(!el) return;
-  if(txt){ el.textContent=txt; el.style.display='block'; }
-  if(hold){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, hold); }
-}
-function setWarmLine(txt, done){
-  const el=document.getElementById('warmTxt'); if(el) el.textContent=txt;
-  const box=document.getElementById('warmLine'); if(box) box.classList.toggle('done', !!done);
-  const b=document.getElementById('startBtn'); if(b) b.textContent = done ? '开始上课 ✓' : '进入课堂';
-}
-function dlOne(src){
-  return new Promise(res=>{
-    if(!src||warmers.has(src)) return res();
-    const v=document.createElement('video');
-    v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
-    document.body.appendChild(v); warmers.set(src,v);
-    let fin=false; const done=()=>{ if(fin) return; fin=true; res(); };
-    v.addEventListener('canplaythrough',done); v.addEventListener('loadeddata',done);
-    v.addEventListener('error',done); setTimeout(done, 25000);
-  });
-}
-function dlImg(src){
-  return new Promise(res=>{ const im=new Image(); im.onload=im.onerror=()=>res(); im.src=src; setTimeout(res,12000); });
-}
-async function pool(list, conc, tick){
-  let i=0, done=0;
-  const worker=async()=>{ while(i<list.length){ const s=list[i++]; await dlOne(s); done++; if(tick) tick(done); } };
-  await Promise.all(Array.from({length:Math.max(1,conc)}, worker));
-}
-function warmAllClips(){
-  if(!CFG || warming) return;
-  warming=true;
-  const items=CFG.items||[];
-  const head=[];
-  if(CFG.entrance&&CFG.entrance.video) head.push(CFG.entrance.video);
-  if(CFG.idle) head.push(CFG.idle);
-  if(CFG.fallback){ if(CFG.fallback.wk) head.push(CFG.fallback.wk.video); if(CFG.fallback.bj) head.push(CFG.fallback.bj.video); }
-  items.slice(0,3).forEach(it=>{ if(it.video) head.push(it.video); });
-  const pri=[...new Set(head)].filter(Boolean);
-  const rest=[...new Set(items.map(it=>it.video).filter(Boolean))].filter(s=>pri.indexOf(s)<0);
-  const imgs=[];
-  items.forEach(it=>{ const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]); sl.forEach(s=>imgs.push(s)); });
-  const gate=pri.length+imgs.length;
-  const cnt=d=>'课前缓存中… '+d+' / '+gate+'（先存开场要用的）';
-  setWarmLine(cnt(0), false);
-  Promise.all([
-    pool(pri, 2, d=>setWarmLine(cnt(d), false)),
-    Promise.all(imgs.map(s=>dlImg(s)))
-  ]).then(()=>{
-    setWarmTip('开场已就绪：'+pri.length+' 段视频 / '+imgs.length+' 张课件图', 6000);
-    setWarmLine('已就绪：可以上课了 ✓ 后台继续缓存其余 '+rest.length+' 段（不影响上课）', true);
-    warming=false;
-    pool(rest, 2, d=>setWarmTip('后台补缓存 '+d+' / '+rest.length));
-  });
-}
-function renderSlide(){
-  curImg=slideList[slideIdx]||'';
-  document.getElementById('pptImg').setAttribute('src',curImg);
-  document.getElementById('pptPage').textContent =
-    slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
-  document.getElementById('pptPrev').disabled = (slideIdx<=0);
-  document.getElementById('pptNext').disabled = (slideIdx>=slideList.length-1);
-  keepPlaying();
-}
-function slideGo(d){
-  if(!slideList.length) return;
-  const n=slideIdx+d;
-  if(n<0||n>=slideList.length) return;
-  slideIdx=n; renderSlide();
-}
-function hideSlide(){
-  slideList=[]; slideIdx=0; curImg='';
-  document.getElementById('pptWin').classList.remove('show');
-  document.getElementById('slideBadge').classList.remove('show');
-}
-/* 标题栏拖动 */
-(function(){
-  const bar=document.getElementById('pptBar'), win=document.getElementById('pptWin');
-  let dx=0,dy=0,drag=false;
-  bar.addEventListener('mousedown',e=>{
-    if(e.target.tagName==='BUTTON') return;
-    const r=win.getBoundingClientRect();
-    win.style.transform='none';
-    win.style.left=r.left+'px'; win.style.top=r.top+'px';
-    dx=e.clientX-r.left; dy=e.clientY-r.top; drag=true; e.preventDefault();
-  });
-  window.addEventListener('mousemove',e=>{
-    if(!drag) return;
-    win.style.left=Math.max(0,Math.min(window.innerWidth-120,e.clientX-dx))+'px';
-    win.style.top =Math.max(0,Math.min(window.innerHeight-60,e.clientY-dy))+'px';
-  });
-  window.addEventListener('mouseup',()=>drag=false);
-})();
-document.getElementById('pptBody').onclick=()=>slideGo(1);
-document.getElementById('pptPrev').onclick=e=>{e.stopPropagation();slideGo(-1);};
-document.getElementById('pptNext').onclick=e=>{e.stopPropagation();slideGo(1);};
-document.getElementById('pptClose').onclick=e=>{e.stopPropagation();hideSlide();};
-document.getElementById('pptFull').onclick=e=>{
-  e.stopPropagation();
-  const w=document.getElementById('pptWin');
-  if(document.fullscreenElement){ document.exitFullscreen(); }
-  else if(w.requestFullscreen){ w.requestFullscreen().catch(()=>{}); }
-};
-document.getElementById('pptPop').onclick=e=>{
-  e.stopPropagation();
-  const u='viewer.html'+(curImg?('?start='+encodeURIComponent(curImg.split('/').pop())):'');
-  window.open(u,'pptdeck','width=1280,height=780,menubar=no,toolbar=no');
-};
-document.getElementById('slideBadge').onclick=()=>{
-  const w=document.getElementById('pptWin');
-  if(slideList.length){ w.classList.toggle('show'); }
-};
-document.addEventListener('click',e=>{ if(holding && e.target && e.target.id==='goIdleBtn'){ holding=false; } },true);
-window.addEventListener('keydown',e=>{
-  const w=document.getElementById('pptWin');
-  if(!w.classList.contains('show')) return;
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ slideGo(1); e.preventDefault(); }
-  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ slideGo(-1); e.preventDefault(); }
-  else if(e.key==='Escape'){ hideSlide(); }
-  else if(e.key==='f'||e.key==='F'){ document.getElementById('pptFull').click(); }
-});
-
-/* ---------- 播放 ---------- */
-/* 动画播放期间暂停语音聆听：否则视频里的配音会被麦克风当成老师口令，导致画面自己乱跳 */
-let listenPaused=false;
-function pauseListen(){
-  listenPaused=true;
-  try{ micstate.classList.remove('live'); mictxt.textContent='动画播放中 · 暂停聆听'; }catch(_){}
-}
-function resumeListen(delay){
-  listenPaused=false;
-  if(!started) return;
-  setTimeout(()=>{ if(listenPaused||!started) return;
-    try{ if(asrReady){ micstate.classList.add('live'); mictxt.textContent='离线语音聆听中'; } }catch(_){}
-  }, delay==null?700:delay);
-}
-function playSrc(src,{loop=false,muted=false,onend}={}){
-  player.loop=loop; player.muted=muted; player.src=src;
-  if(!muted) pauseListen(); else resumeListen(120);      // 有声动画->停听；待机静音->恢复听
-  player.play().catch(()=>{});
-  player.onended=()=>{ if(!player.loop){ resumeListen(900); onend&&onend(); } };
-}
-function goIdle(){
-  playing=false; hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
-  if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
-}
-/* 有课件的段落：播完停在最后一帧，课件继续留在屏上，等老师下指令才回待机 */
-let holding=false;
-function holdEntry(){
-  playing=false; holding=true;
-  try{ player.pause(); }catch(e){}
-  if(slideList.length){
-    document.getElementById('pptWin').classList.add('show');
-    document.getElementById('slideBadge').classList.add('show');
-  }
-  const h=document.getElementById('holdTip'); if(h) h.style.display='block';
-}
-function playEntry(item){
-  if(!item||!item.video) return;
-  playing=true; holding=false; curId=item.id||null;
-  curIdx=idxOf(item.id); updateSegHud(); preloadAround(curIdx);
-  const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
-  const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
-  if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
-  playSrc(item.video,{loop:false,muted:false,onend: _sl ? holdEntry : goIdle});
-  if(item.subtitle){
-    bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
-    whoEl.textContent=(CH_NAME[item.ch]||'')+'：'; replyEl.textContent=item.subtitle;
-  }else{bubble.style.display='none';}
-  if(item.ch){
-    speakerTag.style.display='block'; speakerTag.dataset.ch=item.ch;
-    speakerTag.textContent=CH_NAME[item.ch]||'';
-  }
-}
-
-/* ---------- 语音匹配：按 say 关键词命中最长最多者 ---------- */
-/* ---------- 语音匹配（多层打分） ----------
-   1) 规范化：去标点/空格、全半角统一、常见同音误识别纠正
-   2) 去口癖词（请/吧/我们/一下…）再算一遍，取分高者
-   3) 每条口令：精确子串 → 最长公共子串(60%) + 2-gram 相似度(40%)
-   4) 返回候选列表（含分数），由调用方决定是否够格、是否需要提示
------------------------------------------------- */
-const HOMO={'锤足':'垂足','垂组':'垂足','垂族':'垂足','平形':'平行','凭形':'平行','平行线用':'平行线用',
-  '相焦':'相交','直脚':'直角','严长':'延长','廷长':'延长','点平':'点评','输理':'梳理','弥宫':'迷宫','迷供':'迷宫',
-  '屏行':'平行','垂足是':'垂足','长方体':'长方体','图形':'图形','天台':'台','猪八盖':'猪八戒','孙悟天':'孙悟空'};
-const FILL=['请你','请','吧','啊','呀','呢','哦','我们','大家','一下','开始','现在','那个','然后','好的','来','给我','帮我','我要','你能','可以','麻烦'];
-const NUM=[['一号','1号'],['二号','2号'],['三号','3号'],['四号','4号'],['五号','5号'],['一号作品','1号作品']];
-function norm(t){
-  let s=(t||'').replace(/[\s，。！？、；：,.!?;:'"“”‘’（）()【】\[\]—\-…~]/g,'');
-  for(const k in HOMO) s=s.split(k).join(HOMO[k]);
-  NUM.forEach(p=>{ s=s.split(p[0]).join(p[1]); });
-  return s;
-}
-function stripFill(s){
-  let r=s; FILL.forEach(w=>{r=r.split(w).join('');});
-  return r.length>=2 ? r : s;
-}
-function lcsSub(a,b){                       // 最长公共子串
-  const m=a.length,n=b.length; if(!m||!n) return 0;
-  let best=0, prev=new Array(n+1).fill(0);
-  for(let i=1;i<=m;i++){
-    const cur=new Array(n+1).fill(0);
-    for(let j=1;j<=n;j++){ if(a[i-1]===b[j-1]){ cur[j]=prev[j-1]+1; if(cur[j]>best) best=cur[j]; } }
-    prev=cur;
-  }
-  return best;
-}
-function bigramSim(a,b){
-  if(a.length<2||b.length<2) return 0;
-  const A=new Set(),B=new Set();
-  for(let i=0;i<a.length-1;i++) A.add(a.slice(i,i+2));
-  for(let i=0;i<b.length-1;i++) B.add(b.slice(i,i+2));
-  let hit=0; A.forEach(x=>{ if(B.has(x)) hit++; });
-  return (2*hit)/(A.size+B.size);
-}
-function scoreNode(it,text){
-  let best=0, conf=0, tag='', kw='';
-  (it.say||[]).forEach(k=>{
-    const K=norm(k); if(!K) return;
-    const direct=(text.includes(K) || K.includes(text)) && text.length>=3;
-    if(direct){ const s=K.length*2.0; if(s>best){ best=s; conf=1.0; tag='精确'; kw=k; } return; }
-    const lcs=lcsSub(text,K)/K.length, bg=bigramSim(text,K);
-    const lf=Math.min(1, Math.max(0.5, (K.length-1)/5));
-    const c=(0.6*lcs+0.4*bg)*lf;
-    const s=c*K.length;
-    if(s>best){ best=s; conf=c; tag='模糊 覆盖'+((lcs*100)|0)+'% 词组'+((bg*100)|0)+'%'; kw=k; }
-  });
-  return {score:best, conf:conf, tag:tag, kw:kw};
-}
-function matchEntry(textRaw){
-  const t0=norm(textRaw), t=stripFill(t0);
-  const out=[];
-  (CFG.items||[]).forEach(it=>{
-    const a=scoreNode(it,t0), b=scoreNode(it,t);
-    const pick = b.score>a.score ? b : a;
-    if(pick.score>0) out.push({it:it, score:pick.score, conf:pick.conf, tag:pick.tag, kw:pick.kw});
-  });
-  out.sort((x,y)=>y.score-x.score);
-  return out;
-}
-/* 回声过滤：识别内容≈智能体台词 → 判为"视频自身声音"，忽略 */
-function isAgentLine(text){
-  const t=norm(text); if(t.length<6) return false; let hit=false;
-  (CFG.items||[]).forEach(it=>{ const s=norm(it.subtitle||''); if(!s) return;
-    if(s.length>=8 && t.indexOf(s)>=0) hit=true;
-    if(bigramSim(t,s)>0.75) hit=true; });
-  ['wk','bj'].forEach(k=>{ const s=norm(((CFG.fallback||{})[k]||{}).subtitle||'');
-    if(s.length>=8 && t.indexOf(s)>=0) hit=true; });
-  return hit;
-}
-
-/* =====================================================================
- * 轻量「概率化动作选择」引擎（效果等价 JevSpawn 的概率化动作选择·纯前端离线）
- *   动作空间 = 全部教学节点
- *   ① 一句话 → 对每个节点算相似度 → softmax 成【概率分布】
- *   ② 闸门：绝对匹配分≥MIN_SCORE 且 置信度≥MIN_CONF（防低分误触发）
- *   ③ 分支选择：概率最高者胜出；须 概率≥0.7 或 与次高差距≥MARGIN_MIN，否则判为"不确定"给两个候选
- *   ④ 反馈学习：说"不对/换一个"→给该节点负偏置并切到备选分支；"对/没错"→正偏置
- *   ⑤ 相对指令：下一段 / 上一段 / 继续
- * ===================================================================== */
-const MIN_SCORE=3.0;      // 绝对匹配分下限
-const MIN_CONF=0.50;      // 绝对置信度下限(0..1)
-const P_MIN=0.42;         // 概率下限
-const MARGIN_MIN=0.12;    // 与次高的最小概率差距
-const TEMP=0.5;           // softmax 温度
-const bias=new Map();     // nodeId -> 偏置，由反馈调整
-let lastText='', lastCandidates=[];
-function agentOf(it){ return CH_NAME[it.ch]||'双人'; }
-function probs(textRaw){
-  const raw=matchEntry(textRaw);
-  if(!raw.length) return [];
-  const top8=raw.slice(0,8), mx=top8[0].score;
-  let Z=0; const ws=top8.map(o=>{ const w=Math.exp((o.score-mx)/TEMP); Z+=w; return w; });
-  let out=top8.map((o,i)=>{ const p=ws[i]/Z; const b=bias.get(o.it.id)||0;
-    return {it:o.it, score:o.score, conf:o.conf, p:p, adj:Math.max(0.0001,p+b), tag:o.tag}; });
-  const Z2=out.reduce((s,o)=>s+o.adj,0)||1;
-  out.forEach(o=>o.prob=o.adj/Z2);
-  out.sort((a,b)=>b.prob-a.prob);
-  return out;
-}
-function handleText(text, opts){
-  opts=opts||{}; if(!text) return; text=(text||'').trim();
-  const pc=x=>Math.round(x*100);
-  /* —— 相对指令 —— */
-  if(/(下一段|下一个|继续|接着|往下|下一)/.test(text)){ heardEl.textContent='听到：'+text+'　→　下一段 ▶'; if(typeof nextEntry==='function') nextEntry(1); return; }
-  if(/(上一段|上一个|往回|回去|上一)/.test(text)){ heardEl.textContent='听到：'+text+'　→　上一段 ◀'; if(typeof nextEntry==='function') nextEntry(-1); return; }
-  /* —— 从"不确定的两个候选"里选 —— */
-  if(lastCandidates.length===2 && /(第一个|前者|第1个|一号)/.test(text)){ playEntry(lastCandidates[0].it); return; }
-  if(lastCandidates.length===2 && /(第二个|后者|第2个|二号)/.test(text)){ playEntry(lastCandidates[1].it); return; }
-  /* —— 反馈：否定 → 负偏置并切备选 —— */
-  if(/(不对|不是|错了|换一个|换个|重来|弄错|听不懂)/.test(text)){
-    if(curId) bias.set(curId,(bias.get(curId)||0)-0.4);
-    const c=probs(lastText);
-    heardEl.textContent='听到：'+text+'　→　已否定【'+(curId||'—')+'】，切到备选分支';
-    if(c[1]) playEntry(c[1].it);
-    return;
-  }
-  /* —— 反馈：肯定 —— */
-  if(/^(对|没错|是的|好的?|棒|正确)/.test(text)){
-    if(curId) bias.set(curId,(bias.get(curId)||0)+0.2);
-    heardEl.textContent='听到：'+text+'　→　已确认【'+(curId||'—')+'】✅'; return;
-  }
-  /* —— 概率化动作选择 —— */
-  lastText=text;
-  const c=probs(text);
-  if(c.length){
-    const top=c[0], second=c[1];
-    const margin=top.prob-(second?second.prob:0);
-    const ok=(top.score>=MIN_SCORE) && (top.conf>=MIN_CONF);      // 绝对闸门
-    const certain=ok && (top.prob>=0.7 || margin>=MARGIN_MIN);
-    if(certain){
-      const now=Date.now();
-      if(top.it.id===lastFireId && now-lastFireAt<2500) return;
-      if(top.it.id===curId){ micstate.classList.add('live'); mictxt.textContent='已在播放「'+top.it.id+'」'; return; }
-      lastFireId=top.it.id; lastFireAt=now; lastCandidates=[];
-      heardEl.textContent='听到：'+text+'　→　指挥【'+agentOf(top.it)+'】执行【'+top.it.id+'】　概率 '+pc(top.prob)+'% ✅'+(second?('（次选 '+second.it.id+' '+pc(second.prob)+'%）'):'');
-      mictxt.textContent='识别：'+agentOf(top.it)+' · '+top.it.id+' · '+pc(top.prob)+'%（'+top.tag+'）';
-      playEntry(top.it);
-      return;
-    }
-    if(ok){   // 有匹配但不确定 → 不执行，给两个候选
-      lastCandidates=[top, second].filter(Boolean);
-      heardEl.textContent='听到：'+text+'　→　不确定：'+top.it.id+'('+pc(top.prob)+'%)'+(second?(' / '+second.it.id+'('+pc(second.prob)+'%)'):'')+'　请说"第一个/第二个"或点控制台';
-      mictxt.textContent='不确定（'+top.it.id+' '+pc(top.prob)+'%'+(second?(' / '+second.it.id+' '+pc(second.prob)+'%'):'')+'）';
-      return;
-    }
-    // 绝对分太低：判为未匹配（防误触发）
-    heardEl.textContent='听到：'+text+'　→　未匹配到明确指令（最高仅 '+pc(top.prob)+'%，按噪声忽略）';
-    mictxt.textContent='没听清，请点右下角 ☰ 控制台';
-    return;
-  }
-  if(/悟空|孙悟空/.test(text)){ playEntry(CFG.fallback.wk); return; }
-  if(/八戒|猪八戒/.test(text)){ playEntry(CFG.fallback.bj); return; }
-  heardEl.textContent='听到：'+text+'　→　未匹配到指令（请再说一次或点控制台）';
-  mictxt.textContent='没听清，请点右下角 ☰ 控制台';
-}
-
-/* =====================================================================
- * 离线语音识别（Vosk / WASM）—— 完全本地运行，不联网，识别整句更稳
- *   · 加载 asr/model.tar.gz（中文小模型）→ 麦克风 → KaldiRecognizer
- *   · 只在【最终结果(result)】触发指令；partial 仅用于显示
- *   · 只在"没有【有声】视频在播"时才喂音频 → 待机(静音idle)照常聆听，
- *     动画一停/一静音 立刻恢复，不依赖视频 onended（防卡死）
- * ===================================================================== */
-const ASR_MODEL_URL='asr/model.tar.gz';
-let asrReady=false, asrModel=null, asrRecog=null, audioCtx=null, micStream=null, micSink=null, asrFeed=null, asrDbgEl=null, asrState='';
-window.__lastASR='';
-function audioBusy(){ return !!(player && !player.paused && !player.muted && !player.ended); } // 有【声音】的视频在播=忙
-function asrDbg(){
-  try{
-    if(!asrDbgEl){ asrDbgEl=document.createElement('div');
-      asrDbgEl.style.cssText='position:fixed;left:8px;bottom:8px;z-index:40;font:12px/1.4 Consolas,monospace;color:#9fe8ff;background:rgba(0,0,0,.62);padding:4px 8px;border-radius:6px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-      asrDbgEl.title='点一下可隐藏/显示';
-      asrDbgEl.onclick=function(){ asrDbgEl.style.display='none'; };
-      document.body.appendChild(asrDbgEl); }
-    asrDbgEl.textContent='ASR 引擎'+(window.Vosk?'✓':'✗')
-      +' 模型'+(asrReady?'✓':(asrState||'✗'))
-      +' 麦'+(micStream?'✓':'✗')
-      +' 音频'+(audioCtx?audioCtx.state:'✗')
-      +' 停'+(listenPaused?'1':'0')+' 忙'+(audioBusy()?'1':'0')
-      +' | 最近:'+(window.__lastASR||'—');
-  }catch(_){}
-}
-function asrSetLive(txt){ try{ micstate.classList.add('live'); mictxt.textContent=txt||'离线语音聆听中'; }catch(_){} asrDbg(); }
-async function initASR(){
-  if(!window.Vosk){ asrState='无Vosk'; mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; asrDbg(); return; }
-  /* 关键：主线程先 fetch 模型 → Blob → createModel(blobURL)。
-     worker 直接拉取在 GitHub Pages 上会挂起，主线程 fetch 正常。 */
-  let blobUrl=null;
-  try{
-    asrState='下载中'; mictxt.textContent='正在下载离线语音模型…（约44MB）'; asrDbg();
-    const resp = await fetch(ASR_MODEL_URL, {cache:'force-cache'});
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const total = +(resp.headers.get('content-length')||0);
-    let blob;
-    if(resp.body && resp.body.getReader){
-      const reader=resp.body.getReader(); const chunks=[]; let got=0;
-      for(;;){ const r=await reader.read(); if(r.done) break; chunks.push(r.value); got+=r.value.length;
-        asrState = total ? ('下载'+Math.round(got/total*100)+'%') : '下载中';
-        if(total) mictxt.textContent='正在下载离线语音模型… '+Math.round(got/total*100)+'%';
-        if(total && got>=total) break; }
-      blob=new Blob(chunks,{type:'application/gzip'});
-    } else { blob=await resp.blob(); }
-    blobUrl=URL.createObjectURL(blob);
-  }catch(e){ asrState='下载失败'; mictxt.textContent='离线模型下载失败：'+((e&&e.message)||e); asrDbg(); return; }
-  try{
-    asrState='初始化'; mictxt.textContent='正在初始化语音模型…'; asrDbg();
-    asrModel = await Vosk.createModel(blobUrl);
-    asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; asrDbg(); });
-    asrReady = true; asrState=''; asrDbg();
-    startVoskMic();
-  }catch(e){
-    asrState='加载失败'; mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
-  }
-}
-function startVoskMic(){
-  try{ asrRecog = new asrModel.KaldiRecognizer(); }catch(e){ mictxt.textContent='识别器创建失败：'+((e&&e.message)||e); asrDbg(); return; }
-  asrRecog.on('result', (m)=>{
-    const t=((m.result && m.result.text)||'').trim();
-    if(!t) return;
-    window.__lastASR=t; heardEl.textContent='听到：'+t; asrDbg();
-    if(listenPaused || audioBusy()) return;   // 有声视频在播/手动停 → 不响应
-    if(isAgentLine(t)) return;                // 回声过滤
-    handleText(t, {interim:false});
-  });
-  asrRecog.on('partialresult', (m)=>{
-    const p=((m.result && m.result.partial)||'').trim();
-    if(p){ window.__part=p; if(!listenPaused && !audioBusy()) heardEl.textContent='…'+p; }
-  });
-  navigator.mediaDevices.getUserMedia({ video:false, audio:{ echoCancellation:true, noiseSuppression:true, channelCount:1, sampleRate:16000 } })
-    .then(stream=>{
-      micStream=stream;
-      const AC = window.AudioContext||window.webkitAudioContext;
-      audioCtx = new AC({ sampleRate:16000 });
-      const source = audioCtx.createMediaStreamSource(stream);
-      asrFeed = audioCtx.createScriptProcessor(4096,1,1);
-      asrFeed.onaudioprocess = (ev)=>{ if(listenPaused || audioBusy()) return; window.__feed=(window.__feed||0)+1; try{ asrRecog.acceptWaveform(ev.inputBuffer); }catch(e){ window.__feedE=(window.__feedE||0)+1; } };
-      micSink = audioCtx.createGain(); micSink.gain.value=0;   // 静音接地：保证回调触发且不回声
-      source.connect(asrFeed); asrFeed.connect(micSink); micSink.connect(audioCtx.destination);
-      if(audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
-      asrSetLive('离线语音聆听中');
-    })
-    .catch((e)=>{ mictxt.textContent='麦克风未授权或不可用'; asrDbg(); });
-}
-/* 兜底：浏览器自动播放策略会让 AudioContext 变 suspended，任何交互都尝试恢复 */
-document.addEventListener('pointerdown', function(){ try{ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} asrDbg(); });
-document.addEventListener('keydown', function(e){ if(e.key==='d'||e.key==='D'){ try{ if(asrDbgEl) asrDbgEl.style.display=(asrDbgEl.style.display==='none'?'block':'none'); }catch(_){} } });
-setInterval(asrDbg, 1200);
-/* 自检钩子：#asrtest 时自动开始并把状态写入标题（仅用于自动化验证，不影响正常使用） */
-if(location.hash.indexOf('asrtest')>=0){
-  setTimeout(function(){ try{ document.getElementById('startBtn').click(); }catch(_){} }, 400);
-  setInterval(function(){ document.title='ASR '+(asrReady?'模型OK':('模型'+(asrState||'X')))+' 麦'+(micStream?'OK':'X')+' 音'+(audioCtx?audioCtx.state:'X')+' 忙'+(audioBusy()?'1':'0')+' 帧'+(window.__feed||0)+'E'+(window.__feedE||0)+' 最近'+(window.__lastASR||window.__part||'-'); }, 800);
-}
-
-document.getElementById('startBtn').onclick=()=>{
-  document.getElementById('start').style.display='none';
-  started=true;
-  // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
-  if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
-  else { goIdle(); }
-  document.getElementById('navBtns').classList.add('show'); updateSegHud(); warmAll(); warmAllClips();
-  if(window.Vosk){ initASR(); }
-  else { mictxt.textContent='离线识别未就绪，请用 ☰ 控制台'; }
-};
-
-/* ---------- 控制台：按环节分组 ---------- */
-document.getElementById('warmBtn').onclick=()=>{ warming=false; warmAllClips(); };
-document.getElementById('openPptBtn').onclick=()=>{
-  window.open('viewer.html','pptdeck','width=1280,height=780,menubar=no,toolbar=no');
-};
-document.getElementById('nextSeg').onclick=e=>{e.stopPropagation();nextEntry(1);};
-document.getElementById('prevSeg').onclick=e=>{e.stopPropagation();nextEntry(-1);};
-document.getElementById('panelToggle').onclick=()=>{
-  document.getElementById('panel').classList.toggle('open');
-};
-document.getElementById('goIdleBtn').onclick=goIdle;
-
-function buildPanel(){
-  const scroll=document.getElementById('scroll');
-  if(!CFG)return;
-  const groups={};
-  (CFG.items||[]).forEach(it=>{
-    (groups[it.seg]=groups[it.seg]||[]).push(it);
-  });
-  Object.keys(groups).sort().forEach(s=>{
-    const g=document.createElement('div');g.className='seg-grp';
-    const lab=document.createElement('div');lab.className='seg-label';
-    lab.textContent=(SEG_NAME[s]||('环节'+s))+'（'+groups[s].length+'）';
-    g.appendChild(lab);
-    groups[s].forEach(it=>{
-      const b=document.createElement('button');b.className=it.ch||'both';
-      b.innerHTML=(it.id+' '+(CH_NAME[it.ch]||''))+'<span class="k">'+
-        ((it.subtitle||'').slice(0,22))+'…</span>';
-      b.title='口令：'+(it.say||[]).join(' / ');
-      b.onclick=()=>{playEntry(it);};
-      g.appendChild(b);
-    });
-    scroll.appendChild(g);
-  });
-}
-buildPanel();
-if(CFG&&CFG.idle){player.src=CFG.idle;}
-/* 课前缓存：页面一打开就预热全部视频与课件图，等"缓存完毕"再进课堂 */
-setWarmLine('课前缓存中… 0 / 7（先存开场要用的）', false);
-warmAllClips();
-</script>
-</body>
-</html>
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+
+<title>平行与垂直 · 双智能体课堂</title>
+
+<style>
+
+  :root{
+
+    --wk:#ffb020; --bj:#5fb8ff; --both:#ffe9a8;
+
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+
+  html,body{height:100%;overflow:hidden;background:#000;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:#fff;}
+
+  body{user-select:none;}
+
+
+
+  /* ===== 整屏视频 ===== */
+
+  .screen{position:fixed;inset:0;background:#000;overflow:hidden;}
+
+  video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;}
+
+
+
+  header{position:fixed;top:0;left:0;right:0;z-index:20;text-align:center;padding:18px 16px 0;
+
+    pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.45),transparent);}
+
+  header h1{font-size:clamp(20px,2.8vw,34px);letter-spacing:5px;font-weight:800;
+
+    background:linear-gradient(90deg,var(--wk),#ffe9a8,var(--bj));
+
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+
+
+
+  .micstate{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:21;
+
+    display:flex;align-items:center;gap:8px;font-size:13px;color:#c3cfe4;
+
+    background:rgba(0,0,0,.32);padding:5px 13px;border-radius:999px;}
+
+  .dot{width:9px;height:9px;border-radius:50%;background:#5b6b86;}
+
+  .micstate.live .dot{background:#37e08a;box-shadow:0 0 12px #37e08a;animation:pulse 1.2s infinite;}
+
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.4);opacity:.6;}}
+
+
+
+  .speaker-tag{position:fixed;top:70px;left:22px;z-index:21;display:none;
+
+    padding:7px 16px;border-radius:999px;font-weight:800;letter-spacing:2px;font-size:15px;
+
+    background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px);}
+
+  .speaker-tag[data-ch="wk"]{color:var(--wk);border-color:var(--wk);}
+
+  .speaker-tag[data-ch="bj"]{color:var(--bj);border-color:var(--bj);}
+
+  .speaker-tag[data-ch="both"]{color:var(--both);}
+
+
+
+  /* 字幕 */
+
+  .subs{position:fixed;left:50%;bottom:clamp(20px,4.5vh,48px);transform:translateX(-50%);
+
+    width:min(92vw,1100px);z-index:20;text-align:center;pointer-events:none;}
+
+  .bubble{display:none;padding:14px 26px;border-radius:15px;line-height:1.6;
+
+    background:rgba(8,12,24,.7);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);
+
+    font-size:clamp(15px,1.9vw,24px);box-shadow:0 10px 26px rgba(0,0,0,.45);}
+
+  .bubble .who{font-weight:800;margin-right:9px;}
+
+  .bubble[data-ch="wk"] .who{color:var(--wk);}
+
+  .bubble[data-ch="bj"] .who{color:var(--bj);}
+
+  .bubble[data-ch="both"] .who{color:var(--both);}
+
+  .heard{margin-top:9px;font-size:clamp(11px,1.3vw,15px);color:#9fb0cc;min-height:18px;}
+
+
+
+  /* 开场遮罩 */
+
+  .start{position:fixed;inset:0;z-index:60;background:rgba(6,10,20,.94);
+
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;}
+
+  .start h2{font-size:clamp(22px,3.6vw,40px);letter-spacing:3px;}
+
+  .start p{color:#a9b8d2;max-width:620px;line-height:1.8;font-size:15px;}
+
+  .btn{cursor:pointer;border:none;border-radius:999px;padding:15px 44px;font-size:19px;font-weight:800;letter-spacing:2px;color:#1a1206;
+
+    background:linear-gradient(90deg,var(--wk),#ffd76b);box-shadow:0 10px 30px rgba(255,180,40,.4);transition:transform .2s;}
+
+  .btn:active{transform:scale(.96);}
+
+  .nospeech{color:#ff9c7a;font-size:13px;max-width:540px;line-height:1.7;}
+
+
+
+  /* ===== 教师控制台（可收起，投屏时几乎不可见）===== */
+
+  .panel-toggle{position:fixed;right:14px;bottom:14px;z-index:45;cursor:pointer;
+
+    width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);
+
+    background:rgba(14,22,40,.78);backdrop-filter:blur(6px);color:#dbe6f7;font-size:20px;}
+
+  .panel{position:fixed;right:14px;bottom:70px;z-index:44;width:min(360px,86vw);max-height:74vh;
+
+    display:none;flex-direction:column;gap:8px;overflow:hidden;
+
+    background:rgba(10,16,30,.86);border:1px solid rgba(255,255,255,.14);border-radius:16px;backdrop-filter:blur(10px);}
+
+  .panel.open{display:flex;}
+
+  .panel .bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,.1);}
+
+  .panel .bar b{font-size:14px;letter-spacing:1px;}
+
+  .panel .bar .idlebtn{cursor:pointer;font-size:12px;color:#cdd8ea;border:1px solid rgba(255,255,255,.2);
+
+    padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.06);}
+
+  .scroll{overflow:auto;padding:6px 10px 12px;display:flex;flex-direction:column;gap:10px;}
+
+  .seg-grp{display:flex;flex-direction:column;gap:5px;}
+
+  .seg-label{font-size:12px;color:#9fb0d0;letter-spacing:1px;padding:2px 4px;position:sticky;top:0;
+
+    background:rgba(10,16,30,.9);padding:4px;}
+
+  .seg-grp button{cursor:pointer;text-align:left;border:1px solid rgba(255,255,255,.12);color:#e6edf8;
+
+    background:rgba(255,255,255,.05);border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.4;}
+
+  .seg-grp button:active{transform:scale(.98);}
+
+  .seg-grp button.wk{border-left:3px solid var(--wk);}
+
+  .seg-grp button.bj{border-left:3px solid var(--bj);}
+
+  .seg-grp button.both{border-left:3px solid var(--both);}
+
+  .seg-grp button .k{display:block;color:#8fa0c6;font-size:11px;margin-top:2px;}
+
+
+
+  /* ===== 课件（PPT 弹窗）===== */
+
+  #pptWin{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);z-index:40;display:none;
+
+    flex-direction:column;width:min(1080px,88vw);height:min(710px,80vh);min-width:400px;min-height:260px;
+
+    resize:both;overflow:hidden;border-radius:14px;border:1px solid rgba(255,255,255,.16);
+
+    background:#0b1220;box-shadow:0 26px 80px rgba(0,0,0,.72);}
+
+  #pptWin.show{display:flex;}
+
+  .pptbar{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:move;user-select:none;
+
+    background:linear-gradient(180deg,rgba(255,176,32,.22),rgba(255,176,32,.05));
+
+    border-bottom:1px solid rgba(255,255,255,.12);}
+
+  .pptbar b{font-size:14px;letter-spacing:1px;color:#ffd88a;white-space:nowrap;}
+
+  .pptbar .pg{font-size:12px;color:#9fb0cc;white-space:nowrap;}
+
+  .pptbar .grow{flex:1;}
+
+  .pptbar button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.18);
+
+    border-radius:8px;padding:3px 10px;font-size:13px;line-height:1.5;}
+
+  .pptbar button:hover{background:rgba(255,255,255,.2);}
+
+  #pptWin .pptbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:6px;
+
+    background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.06),transparent 70%);}
+
+  #pptWin .pptbody img{max-width:100%;max-height:100%;border-radius:8px;}
+
+  #pptWin .ppthint{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:12px;color:#8ea0c4;
+
+    padding:3px;background:linear-gradient(0deg,rgba(0,0,0,.5),transparent);pointer-events:none;}
+
+  .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
+
+    background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
+
+  .slide-badge.show{display:block;}
+
+  #warmTip{position:fixed;top:74px;right:22px;z-index:42;display:none;padding:5px 14px;border-radius:999px;
+
+    background:rgba(10,14,24,.78);border:1px solid rgba(255,176,32,.45);color:#ffd88a;font-size:12px;letter-spacing:1px;}
+
+  #bufTip{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:42;display:none;
+
+    padding:6px 18px;border-radius:999px;background:rgba(10,14,24,.8);border:1px solid rgba(255,255,255,.25);
+
+    color:#dbe6f7;font-size:13px;letter-spacing:1px;}
+
+  #navBtns{position:fixed;left:14px;bottom:14px;z-index:41;display:none;gap:8px;align-items:center;}
+
+  #navBtns.show{display:flex;}
+
+  #navBtns button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.22);
+
+    border-radius:10px;padding:7px 14px;font-size:14px;}
+
+  #navBtns button:hover{background:rgba(255,255,255,.2);}
+
+  #navBtns #segIdx{color:#9fb0cc;font-size:13px;min-width:62px;text-align:center;}
+
+  #holdTip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
+
+    padding:6px 18px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
+
+    color:#ffd88a;font-size:13px;letter-spacing:1px;white-space:nowrap;}
+
+  .warmline{margin-top:16px;font-size:15px;color:#ffd88a;display:flex;align-items:center;justify-content:center;gap:9px;letter-spacing:.5px;}
+
+  .warmline .sp{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,216,138,.3);border-top-color:#ffd88a;animation:spin .9s linear infinite;}
+
+  .warmline.done{color:#8ef0b4;} .warmline.done .sp{display:none;}
+
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+</style>
+
+</head>
+
+<body>
+
+  <div class="screen"><video id="player" src="" muted playsinline autoplay loop></video></div>
+
+
+
+  <header><h1>平 行 与 垂 直</h1></header>
+
+  <div class="speaker-tag" id="speakerTag"></div>
+
+  <div class="micstate" id="micstate"><span class="dot"></span><span id="mictxt">语音未启动</span></div>
+
+
+
+  <div class="subs">
+
+    <div class="bubble" id="bubble"><span class="who" id="who"></span><span id="reply"></span></div>
+
+    <div class="heard" id="heard"></div>
+
+  </div>
+
+
+
+  <div id="bufTip">加载中…</div>
+
+  <div id="warmTip"></div>
+
+  <div class="navbtns" id="navBtns">
+
+    <button id="prevSeg" title="上一段（←）">◀ 上一段</button>
+
+    <span id="segIdx">0 / 0</span>
+
+    <button id="nextSeg" title="下一段（→ / 空格 / 点画面）">下一段 ▶</button>
+
+  </div>
+
+  <div class="slide-badge" id="slideBadge" title="点击可再次调出课件">课件</div>
+
+  <div id="pptWin">
+
+    <div class="pptbar" id="pptBar">
+
+      <b id="pptName">课件</b><span class="pg" id="pptPage"></span><span class="grow"></span>
+
+      <button id="pptPrev" title="上一页（←）">◀</button>
+
+      <button id="pptNext" title="下一页（→ 或空格）">▶</button>
+
+      <button id="pptFull" title="全屏 / 还原（F）">全屏</button>
+
+      <button id="pptPop" title="在新窗口打开完整 PPT（可拖到副屏）">新窗口</button>
+
+      <button id="pptClose" title="收起（Esc）">✕</button>
+
+    </div>
+
+    <div class="pptbody" id="pptBody"><img id="pptImg" alt="课件"></div>
+
+    <div class="ppthint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放</div>
+
+  </div>
+
+
+
+  <div id="holdTip">课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续</div>
+
+  <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
+
+  <div class="panel" id="panel">
+
+    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="warmBtn" title="把全部视频与课件图预热到缓存">全部预加载</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
+
+    <div class="scroll" id="scroll"></div>
+
+  </div>
+
+
+
+  <div class="start" id="start">
+
+    <h2>《平行与垂直》双智能体课堂</h2>
+
+    <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
+
+       开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
+
+      讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。</p>
+
+    <button class="btn" id="startBtn">进入课堂</button>
+
+    <div class="warmline" id="warmLine"><span class="sp"></span><span id="warmTxt">正在课前缓存…</span></div>
+
+    <p class="nospeech" id="nospeech" style="display:none;">
+
+      当前浏览器不支持离线语音识别（需 Chrome/Edge）。不影响使用：请用右下角控制台按环节点击播放。
+
+    </p>
+
+  </div>
+
+
+
+<script src="asr/vosk.js"></script>
+
+<script src="dialogues.js"></script>
+
+<script>
+
+const CFG=window.DIALOGUES;
+
+const player=document.getElementById('player');
+
+const bubble=document.getElementById('bubble'),whoEl=document.getElementById('who'),
+
+      replyEl=document.getElementById('reply'),heardEl=document.getElementById('heard');
+
+const speakerTag=document.getElementById('speakerTag');
+
+const micstate=document.getElementById('micstate'),mictxt=document.getElementById('mictxt');
+
+const CH_NAME={wk:'孙悟空',bj:'猪八戒',both:'双人'};
+
+const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相交',3:'环节三 · 同一平面',
+
+                4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
+
+let playing=false, started=false, recog=null, curIdx=-1;
+
+
+
+let slideList=[], slideIdx=0, slideName='课件', curImg='';
+
+
+
+function showSlides(list, name){
+
+  list=(list||[]).filter(Boolean);
+
+  if(!list.length){ hideSlide(); return; }
+
+  slideList=list; slideIdx=0;
+
+  if(name) slideName=name;
+
+  document.getElementById('pptName').textContent=slideName;
+
+  document.getElementById('pptWin').classList.add('show');
+
+  document.getElementById('slideBadge').classList.add('show');
+
+  renderSlide();
+
+  keepPlaying();
+
+}
+
+/* 弹课件时不让动画/配音停：只要在播流程中就续播 */
+
+function keepPlaying(){
+
+  try{
+
+    if(typeof player!=='undefined' && player && player.paused && player.getAttribute('src')) player.play().catch(()=>{});
+
+  }catch(e){}
+
+}
+
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) keepPlaying(); });
+
+
+
+/* ---------- 片段导航：点画面 / →← / 按钮 切换下一段 ---------- */
+
+function idxOf(id){ return (CFG&&CFG.items)?CFG.items.findIndex(x=>x.id===id):-1; }
+
+function nextEntry(d){
+
+  if(!CFG||!CFG.items||!CFG.items.length) return;
+
+  let i = (curIdx<0) ? (d>0?0:0) : curIdx+d;
+
+  i = Math.max(0, Math.min(CFG.items.length-1, i));
+
+  const it=CFG.items[i];
+
+  if(it) playEntry(it);
+
+}
+
+function updateSegHud(){
+
+  const n=(CFG&&CFG.items)?CFG.items.length:0;
+
+  const el=document.getElementById('segIdx');
+
+  if(el) el.textContent = (curIdx>=0? (curIdx+1) : 0) + ' / ' + n;
+
+}
+
+document.addEventListener('click',e=>{
+
+  if(!started) return;
+
+  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge')) return;
+
+  if(document.getElementById('pptWin').classList.contains('show')) return;   // 课件窗口开着时点画面=课件翻页
+
+  nextEntry(1);
+
+}, true);
+
+window.addEventListener('keydown',e=>{
+
+  if(!started) return;
+
+  if(document.getElementById('pptWin').classList.contains('show')) return;   // 交给课件窗口的快捷键
+
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='Enter'){ nextEntry(1); e.preventDefault(); }
+
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ nextEntry(-1); e.preventDefault(); }
+
+});
+
+
+
+/* ---------- 预加载：把后面几段提前拉进浏览器缓存，切换即播 ---------- */
+
+const AHEAD=3, WARM_MAX=8;
+
+const warmers=new Map();
+
+function warm(src, big){
+
+  if(!src || warmers.has(src)) return;
+
+  const v=document.createElement('video');
+
+  v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
+
+  document.body.appendChild(v);
+
+  try{ v.load(); }catch(_){}
+
+  warmers.set(src,v);
+
+  if(warmers.size>(big?24:WARM_MAX)){
+
+    const k=warmers.keys().next().value;
+
+    if(k!==src){
+
+      const el=warmers.get(k); warmers.delete(k);
+
+      try{ el.removeAttribute('src'); el.load(); }catch(_){}
+
+      el.remove();
+
+    }
+
+  }
+
+}
+
+function preloadAround(i){
+
+  if(!CFG) return;
+
+  warm(CFG.idle);
+
+  const its=CFG.items||[];
+
+  for(let k=1;k<=AHEAD;k++){ const it=its[i+k]; if(it) warm(it.video); }
+
+  if(its[i-1]) warm(its[i-1].video);
+
+  for(let k=1;k<=2;k++){                       // 顺手预载下一两段的课件图
+
+    const it=its[i+k]; if(!it) continue;
+
+    const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
+
+    sl.forEach(s=>{ const im=new Image(); im.src=s; });
+
+  }
+
+}
+
+function warmAll(){
+
+  if(!CFG) return;
+
+  if(CFG.entrance&&CFG.entrance.video) warm(CFG.entrance.video);
+
+  warm(CFG.idle);
+
+  if(CFG.fallback){ if(CFG.fallback.wk) warm(CFG.fallback.wk.video); if(CFG.fallback.bj) warm(CFG.fallback.bj.video); }
+
+  preloadAround(-1);
+
+}
+
+player.addEventListener('waiting',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='block'; });
+
+player.addEventListener('playing',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
+
+player.addEventListener('canplay',()=>{ const t=document.getElementById('bufTip'); if(t) t.style.display='none'; });
+
+
+
+/* ---------- 全部预加载：整包视频 + 课件图一次预热 ---------- */
+
+let warming=false;
+
+function setWarmTip(txt, hold){
+
+  const el=document.getElementById('warmTip'); if(!el) return;
+
+  if(txt){ el.textContent=txt; el.style.display='block'; }
+
+  if(hold){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, hold); }
+
+}
+
+function setWarmLine(txt, done){
+
+  const el=document.getElementById('warmTxt'); if(el) el.textContent=txt;
+
+  const box=document.getElementById('warmLine'); if(box) box.classList.toggle('done', !!done);
+
+  const b=document.getElementById('startBtn'); if(b) b.textContent = done ? '开始上课 ✓' : '进入课堂';
+
+}
+
+function dlOne(src){
+
+  return new Promise(res=>{
+
+    if(!src||warmers.has(src)) return res();
+
+    const v=document.createElement('video');
+
+    v.preload='auto'; v.muted=true; v.playsInline=true; v.src=src; v.style.display='none';
+
+    document.body.appendChild(v); warmers.set(src,v);
+
+    let fin=false; const done=()=>{ if(fin) return; fin=true; res(); };
+
+    v.addEventListener('canplaythrough',done); v.addEventListener('loadeddata',done);
+
+    v.addEventListener('error',done); setTimeout(done, 25000);
+
+  });
+
+}
+
+function dlImg(src){
+
+  return new Promise(res=>{ const im=new Image(); im.onload=im.onerror=()=>res(); im.src=src; setTimeout(res,12000); });
+
+}
+
+async function pool(list, conc, tick){
+
+  let i=0, done=0;
+
+  const worker=async()=>{ while(i<list.length){ const s=list[i++]; await dlOne(s); done++; if(tick) tick(done); } };
+
+  await Promise.all(Array.from({length:Math.max(1,conc)}, worker));
+
+}
+
+function warmAllClips(){
+
+  if(!CFG || warming) return;
+
+  warming=true;
+
+  const items=CFG.items||[];
+
+  const head=[];
+
+  if(CFG.entrance&&CFG.entrance.video) head.push(CFG.entrance.video);
+
+  if(CFG.idle) head.push(CFG.idle);
+
+  if(CFG.fallback){ if(CFG.fallback.wk) head.push(CFG.fallback.wk.video); if(CFG.fallback.bj) head.push(CFG.fallback.bj.video); }
+
+  items.slice(0,3).forEach(it=>{ if(it.video) head.push(it.video); });
+
+  const pri=[...new Set(head)].filter(Boolean);
+
+  const rest=[...new Set(items.map(it=>it.video).filter(Boolean))].filter(s=>pri.indexOf(s)<0);
+
+  const imgs=[];
+
+  items.forEach(it=>{ const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]); sl.forEach(s=>imgs.push(s)); });
+
+  const gate=pri.length+imgs.length;
+
+  const cnt=d=>'课前缓存中… '+d+' / '+gate+'（先存开场要用的）';
+
+  setWarmLine(cnt(0), false);
+
+  Promise.all([
+
+    pool(pri, 2, d=>setWarmLine(cnt(d), false)),
+
+    Promise.all(imgs.map(s=>dlImg(s)))
+
+  ]).then(()=>{
+
+    setWarmTip('开场已就绪：'+pri.length+' 段视频 / '+imgs.length+' 张课件图', 6000);
+
+    setWarmLine('已就绪：可以上课了 ✓ 后台继续缓存其余 '+rest.length+' 段（不影响上课）', true);
+
+    warming=false;
+
+    pool(rest, 2, d=>setWarmTip('后台补缓存 '+d+' / '+rest.length));
+
+  });
+
+}
+
+function renderSlide(){
+
+  curImg=slideList[slideIdx]||'';
+
+  document.getElementById('pptImg').setAttribute('src',curImg);
+
+  document.getElementById('pptPage').textContent =
+
+    slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
+
+  document.getElementById('pptPrev').disabled = (slideIdx<=0);
+
+  document.getElementById('pptNext').disabled = (slideIdx>=slideList.length-1);
+
+  keepPlaying();
+
+}
+
+function slideGo(d){
+
+  if(!slideList.length) return;
+
+  const n=slideIdx+d;
+
+  if(n<0||n>=slideList.length) return;
+
+  slideIdx=n; renderSlide();
+
+}
+
+function hideSlide(){
+
+  slideList=[]; slideIdx=0; curImg='';
+
+  document.getElementById('pptWin').classList.remove('show');
+
+  document.getElementById('slideBadge').classList.remove('show');
+
+}
+
+/* 标题栏拖动 */
+
+(function(){
+
+  const bar=document.getElementById('pptBar'), win=document.getElementById('pptWin');
+
+  let dx=0,dy=0,drag=false;
+
+  bar.addEventListener('mousedown',e=>{
+
+    if(e.target.tagName==='BUTTON') return;
+
+    const r=win.getBoundingClientRect();
+
+    win.style.transform='none';
+
+    win.style.left=r.left+'px'; win.style.top=r.top+'px';
+
+    dx=e.clientX-r.left; dy=e.clientY-r.top; drag=true; e.preventDefault();
+
+  });
+
+  window.addEventListener('mousemove',e=>{
+
+    if(!drag) return;
+
+    win.style.left=Math.max(0,Math.min(window.innerWidth-120,e.clientX-dx))+'px';
+
+    win.style.top =Math.max(0,Math.min(window.innerHeight-60,e.clientY-dy))+'px';
+
+  });
+
+  window.addEventListener('mouseup',()=>drag=false);
+
+})();
+
+document.getElementById('pptBody').onclick=()=>slideGo(1);
+
+document.getElementById('pptPrev').onclick=e=>{e.stopPropagation();slideGo(-1);};
+
+document.getElementById('pptNext').onclick=e=>{e.stopPropagation();slideGo(1);};
+
+document.getElementById('pptClose').onclick=e=>{e.stopPropagation();hideSlide();};
+
+document.getElementById('pptFull').onclick=e=>{
+
+  e.stopPropagation();
+
+  const w=document.getElementById('pptWin');
+
+  if(document.fullscreenElement){ document.exitFullscreen(); }
+
+  else if(w.requestFullscreen){ w.requestFullscreen().catch(()=>{}); }
+
+};
+
+document.getElementById('pptPop').onclick=e=>{
+
+  e.stopPropagation();
+
+  const u='viewer.html'+(curImg?('?start='+encodeURIComponent(curImg.split('/').pop())):'');
+
+  window.open(u,'pptdeck','width=1280,height=780,menubar=no,toolbar=no');
+
+};
+
+document.getElementById('slideBadge').onclick=()=>{
+
+  const w=document.getElementById('pptWin');
+
+  if(slideList.length){ w.classList.toggle('show'); }
+
+};
+
+document.addEventListener('click',e=>{ if(holding && e.target && e.target.id==='goIdleBtn'){ holding=false; } },true);
+
+window.addEventListener('keydown',e=>{
+
+  const w=document.getElementById('pptWin');
+
+  if(!w.classList.contains('show')) return;
+
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ slideGo(1); e.preventDefault(); }
+
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ slideGo(-1); e.preventDefault(); }
+
+  else if(e.key==='Escape'){ hideSlide(); }
+
+  else if(e.key==='f'||e.key==='F'){ document.getElementById('pptFull').click(); }
+
+});
+
+
+
+/* ---------- 播放 ---------- */
+
+/* 动画播放期间暂停语音聆听：否则视频里的配音会被麦克风当成老师口令，导致画面自己乱跳 */
+
+let listenPaused=false;
+
+function pauseListen(){
+
+  listenPaused=true;
+
+  try{ micstate.classList.remove('live'); mictxt.textContent='动画播放中 · 暂停聆听'; }catch(_){}
+
+}
+
+function resumeListen(delay){
+
+  listenPaused=false;
+
+  if(!started) return;
+
+  setTimeout(()=>{ if(listenPaused||!started) return;
+
+    try{ if(asrReady){ micstate.classList.add('live'); mictxt.textContent='离线语音聆听中'; } }catch(_){}
+
+  }, delay==null?700:delay);
+
+}
+
+function playSrc(src,{loop=false,muted=false,onend}={}){
+
+  player.loop=loop; player.muted=muted; player.src=src;
+
+  if(!muted) pauseListen(); else resumeListen(120);      // 有声动画->停听；待机静音->恢复听
+
+  player.play().catch(()=>{});
+
+  player.onended=()=>{ if(!player.loop){ resumeListen(900); onend&&onend(); } };
+
+}
+
+function goIdle(){
+
+  playing=false; hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
+
+  if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
+
+}
+
+/* 有课件的段落：播完停在最后一帧，课件继续留在屏上，等老师下指令才回待机 */
+
+let holding=false;
+
+function holdEntry(){
+
+  playing=false; holding=true;
+
+  try{ player.pause(); }catch(e){}
+
+  if(slideList.length){
+
+    document.getElementById('pptWin').classList.add('show');
+
+    document.getElementById('slideBadge').classList.add('show');
+
+  }
+
+  const h=document.getElementById('holdTip'); if(h) h.style.display='block';
+
+}
+
+function playEntry(item){
+
+  if(!item||!item.video) return;
+
+  playing=true; holding=false; curId=item.id||null;
+
+  curIdx=idxOf(item.id); updateSegHud(); preloadAround(curIdx);
+
+  const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
+
+  const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
+
+  if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
+
+  playSrc(item.video,{loop:false,muted:false,onend: _sl ? holdEntry : goIdle});
+
+  if(item.subtitle){
+
+    bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
+
+    whoEl.textContent=(CH_NAME[item.ch]||'')+'：'; replyEl.textContent=item.subtitle;
+
+  }else{bubble.style.display='none';}
+
+  if(item.ch){
+
+    speakerTag.style.display='block'; speakerTag.dataset.ch=item.ch;
+
+    speakerTag.textContent=CH_NAME[item.ch]||'';
+
+  }
+
+}
+
+
+
+/* ---------- 语音匹配：按 say 关键词命中最长最多者 ---------- */
+
+/* ---------- 语音匹配（多层打分） ----------
+
+   1) 规范化：去标点/空格、全半角统一、常见同音误识别纠正
+
+   2) 去口癖词（请/吧/我们/一下…）再算一遍，取分高者
+
+   3) 每条口令：精确子串 → 最长公共子串(60%) + 2-gram 相似度(40%)
+
+   4) 返回候选列表（含分数），由调用方决定是否够格、是否需要提示
+
+------------------------------------------------ */
+
+const HOMO={'锤足':'垂足','垂组':'垂足','垂族':'垂足','平形':'平行','凭形':'平行','平行线用':'平行线用',
+
+  '相焦':'相交','直脚':'直角','严长':'延长','廷长':'延长','点平':'点评','输理':'梳理','弥宫':'迷宫','迷供':'迷宫',
+
+  '屏行':'平行','垂足是':'垂足','长方体':'长方体','图形':'图形','天台':'台','猪八盖':'猪八戒','孙悟天':'孙悟空'};
+
+const FILL=['请你','请','吧','啊','呀','呢','哦','我们','大家','一下','开始','现在','那个','然后','好的','来','给我','帮我','我要','你能','可以','麻烦'];
+
+const NUM=[['一号','1号'],['二号','2号'],['三号','3号'],['四号','4号'],['五号','5号'],['一号作品','1号作品']];
+
+function norm(t){
+
+  let s=(t||'').replace(/[\s，。！？、；：,.!?;:'"“”‘’（）()【】\[\]—\-…~]/g,'');
+
+  for(const k in HOMO) s=s.split(k).join(HOMO[k]);
+
+  NUM.forEach(p=>{ s=s.split(p[0]).join(p[1]); });
+
+  return s;
+
+}
+
+function stripFill(s){
+
+  let r=s; FILL.forEach(w=>{r=r.split(w).join('');});
+
+  return r.length>=2 ? r : s;
+
+}
+
+function lcsSub(a,b){                       // 最长公共子串
+
+  const m=a.length,n=b.length; if(!m||!n) return 0;
+
+  let best=0, prev=new Array(n+1).fill(0);
+
+  for(let i=1;i<=m;i++){
+
+    const cur=new Array(n+1).fill(0);
+
+    for(let j=1;j<=n;j++){ if(a[i-1]===b[j-1]){ cur[j]=prev[j-1]+1; if(cur[j]>best) best=cur[j]; } }
+
+    prev=cur;
+
+  }
+
+  return best;
+
+}
+
+function bigramSim(a,b){
+
+  if(a.length<2||b.length<2) return 0;
+
+  const A=new Set(),B=new Set();
+
+  for(let i=0;i<a.length-1;i++) A.add(a.slice(i,i+2));
+
+  for(let i=0;i<b.length-1;i++) B.add(b.slice(i,i+2));
+
+  let hit=0; A.forEach(x=>{ if(B.has(x)) hit++; });
+
+  return (2*hit)/(A.size+B.size);
+
+}
+
+function scoreNode(it,text){
+
+  let best=0, conf=0, tag='', kw='';
+
+  (it.say||[]).forEach(k=>{
+
+    const K=norm(k); if(!K) return;
+
+    const direct=(text.includes(K) || K.includes(text)) && text.length>=3;
+
+    if(direct){ const s=K.length*2.0; if(s>best){ best=s; conf=1.0; tag='精确'; kw=k; } return; }
+
+    const lcs=lcsSub(text,K)/K.length, bg=bigramSim(text,K);
+
+    const lf=Math.min(1, Math.max(0.5, (K.length-1)/5));
+
+    const c=(0.6*lcs+0.4*bg)*lf;
+
+    const s=c*K.length;
+
+    if(s>best){ best=s; conf=c; tag='模糊 覆盖'+((lcs*100)|0)+'% 词组'+((bg*100)|0)+'%'; kw=k; }
+
+  });
+
+  return {score:best, conf:conf, tag:tag, kw:kw};
+
+}
+
+function matchEntry(textRaw){
+
+  const t0=norm(textRaw), t=stripFill(t0);
+
+  const out=[];
+
+  (CFG.items||[]).forEach(it=>{
+
+    const a=scoreNode(it,t0), b=scoreNode(it,t);
+
+    const pick = b.score>a.score ? b : a;
+
+    if(pick.score>0) out.push({it:it, score:pick.score, conf:pick.conf, tag:pick.tag, kw:pick.kw});
+
+  });
+
+  out.sort((x,y)=>y.score-x.score);
+
+  return out;
+
+}
+
+/* 回声过滤：识别内容≈智能体台词 → 判为"视频自身声音"，忽略 */
+
+function isAgentLine(text){
+
+  const t=norm(text); if(t.length<6) return false; let hit=false;
+
+  (CFG.items||[]).forEach(it=>{ const s=norm(it.subtitle||''); if(!s) return;
+
+    if(s.length>=8 && t.indexOf(s)>=0) hit=true;
+
+    if(bigramSim(t,s)>0.75) hit=true; });
+
+  ['wk','bj'].forEach(k=>{ const s=norm(((CFG.fallback||{})[k]||{}).subtitle||'');
+
+    if(s.length>=8 && t.indexOf(s)>=0) hit=true; });
+
+  return hit;
+
+}
+
+
+
+/* =====================================================================
+
+ * 轻量「概率化动作选择」引擎（效果等价 JevSpawn 的概率化动作选择·纯前端离线）
+
+ *   动作空间 = 全部教学节点
+
+ *   ① 一句话 → 对每个节点算相似度 → softmax 成【概率分布】
+
+ *   ② 闸门：绝对匹配分≥MIN_SCORE 且 置信度≥MIN_CONF（防低分误触发）
+
+ *   ③ 分支选择：概率最高者胜出；须 概率≥0.7 或 与次高差距≥MARGIN_MIN，否则判为"不确定"给两个候选
+
+ *   ④ 反馈学习：说"不对/换一个"→给该节点负偏置并切到备选分支；"对/没错"→正偏置
+
+ *   ⑤ 相对指令：下一段 / 上一段 / 继续
+
+ * ===================================================================== */
+
+const MIN_SCORE=3.0;      // 绝对匹配分下限
+
+const MIN_CONF=0.50;      // 绝对置信度下限(0..1)
+
+const P_MIN=0.42;         // 概率下限
+
+const MARGIN_MIN=0.12;    // 与次高的最小概率差距
+
+const TEMP=0.5;           // softmax 温度
+
+const bias=new Map();     // nodeId -> 偏置，由反馈调整
+
+let lastText='', lastCandidates=[];
+
+function agentOf(it){ return CH_NAME[it.ch]||'双人'; }
+
+function probs(textRaw){
+
+  const raw=matchEntry(textRaw);
+
+  if(!raw.length) return [];
+
+  const top8=raw.slice(0,8), mx=top8[0].score;
+
+  let Z=0; const ws=top8.map(o=>{ const w=Math.exp((o.score-mx)/TEMP); Z+=w; return w; });
+
+  let out=top8.map((o,i)=>{ const p=ws[i]/Z; const b=bias.get(o.it.id)||0;
+
+    return {it:o.it, score:o.score, conf:o.conf, p:p, adj:Math.max(0.0001,p+b), tag:o.tag}; });
+
+  const Z2=out.reduce((s,o)=>s+o.adj,0)||1;
+
+  out.forEach(o=>o.prob=o.adj/Z2);
+
+  out.sort((a,b)=>b.prob-a.prob);
+
+  return out;
+
+}
+
+function handleText(text, opts){
+
+  opts=opts||{}; if(!text) return; text=(text||'').trim();
+
+  const pc=x=>Math.round(x*100);
+
+  /* —— 相对指令 —— */
+
+  if(/(下一段|下一个|继续|接着|往下|下一)/.test(text)){ heardEl.textContent='听到：'+text+'　→　下一段 ▶'; if(typeof nextEntry==='function') nextEntry(1); return; }
+
+  if(/(上一段|上一个|往回|回去|上一)/.test(text)){ heardEl.textContent='听到：'+text+'　→　上一段 ◀'; if(typeof nextEntry==='function') nextEntry(-1); return; }
+
+  /* —— 从"不确定的两个候选"里选 —— */
+
+  if(lastCandidates.length===2 && /(第一个|前者|第1个|一号)/.test(text)){ playEntry(lastCandidates[0].it); return; }
+
+  if(lastCandidates.length===2 && /(第二个|后者|第2个|二号)/.test(text)){ playEntry(lastCandidates[1].it); return; }
+
+  /* —— 反馈：否定 → 负偏置并切备选 —— */
+
+  if(/(不对|不是|错了|换一个|换个|重来|弄错|听不懂)/.test(text)){
+
+    if(curId) bias.set(curId,(bias.get(curId)||0)-0.4);
+
+    const c=probs(lastText);
+
+    heardEl.textContent='听到：'+text+'　→　已否定【'+(curId||'—')+'】，切到备选分支';
+
+    if(c[1]) playEntry(c[1].it);
+
+    return;
+
+  }
+
+  /* —— 反馈：肯定 —— */
+
+  if(/^(对|没错|是的|好的?|棒|正确)/.test(text)){
+
+    if(curId) bias.set(curId,(bias.get(curId)||0)+0.2);
+
+    heardEl.textContent='听到：'+text+'　→　已确认【'+(curId||'—')+'】✅'; return;
+
+  }
+
+  /* —— 概率化动作选择 —— */
+
+  lastText=text;
+
+  const c=probs(text);
+
+  if(c.length){
+
+    const top=c[0], second=c[1];
+
+    const margin=top.prob-(second?second.prob:0);
+
+    const ok=(top.score>=MIN_SCORE) && (top.conf>=MIN_CONF);      // 绝对闸门
+
+    const certain=ok && (top.prob>=0.7 || margin>=MARGIN_MIN);
+
+    if(certain){
+
+      const now=Date.now();
+
+      if(top.it.id===lastFireId && now-lastFireAt<2500) return;
+
+      if(top.it.id===curId){ micstate.classList.add('live'); mictxt.textContent='已在播放「'+top.it.id+'」'; return; }
+
+      lastFireId=top.it.id; lastFireAt=now; lastCandidates=[];
+
+      heardEl.textContent='听到：'+text+'　→　指挥【'+agentOf(top.it)+'】执行【'+top.it.id+'】　概率 '+pc(top.prob)+'% ✅'+(second?('（次选 '+second.it.id+' '+pc(second.prob)+'%）'):'');
+
+      mictxt.textContent='识别：'+agentOf(top.it)+' · '+top.it.id+' · '+pc(top.prob)+'%（'+top.tag+'）';
+
+      playEntry(top.it);
+
+      return;
+
+    }
+
+    if(ok){   // 有匹配但不确定 → 不执行，给两个候选
+
+      lastCandidates=[top, second].filter(Boolean);
+
+      heardEl.textContent='听到：'+text+'　→　不确定：'+top.it.id+'('+pc(top.prob)+'%)'+(second?(' / '+second.it.id+'('+pc(second.prob)+'%)'):'')+'　请说"第一个/第二个"或点控制台';
+
+      mictxt.textContent='不确定（'+top.it.id+' '+pc(top.prob)+'%'+(second?(' / '+second.it.id+' '+pc(second.prob)+'%'):'')+'）';
+
+      return;
+
+    }
+
+    // 绝对分太低：判为未匹配（防误触发）
+
+    heardEl.textContent='听到：'+text+'　→　未匹配到明确指令（最高仅 '+pc(top.prob)+'%，按噪声忽略）';
+
+    mictxt.textContent='没听清，请点右下角 ☰ 控制台';
+
+    return;
+
+  }
+
+  if(/悟空|孙悟空/.test(text)){ playEntry(CFG.fallback.wk); return; }
+
+  if(/八戒|猪八戒/.test(text)){ playEntry(CFG.fallback.bj); return; }
+
+  heardEl.textContent='听到：'+text+'　→　未匹配到指令（请再说一次或点控制台）';
+
+  mictxt.textContent='没听清，请点右下角 ☰ 控制台';
+
+}
+
+
+
+/* =====================================================================
+
+ * 离线语音识别（Vosk / WASM）—— 完全本地运行，不联网，识别整句更稳
+
+ *   · 加载 asr/model.tar.gz（中文小模型）→ 麦克风 → KaldiRecognizer
+
+ *   · 只在【最终结果(result)】触发指令；partial 仅用于显示
+
+ *   · 只在"没有【有声】视频在播"时才喂音频 → 待机(静音idle)照常聆听，
+
+ *     动画一停/一静音 立刻恢复，不依赖视频 onended（防卡死）
+
+ * ===================================================================== */
+
+const ASR_MODEL_URL='asr/model.tar.gz';
+
+let asrReady=false, asrModel=null, asrRecog=null, audioCtx=null, micStream=null, micSink=null, asrFeed=null, asrDbgEl=null, asrState='';
+
+window.__lastASR='';
+
+function audioBusy(){ return !!(player && !player.paused && !player.muted && !player.ended); } // 有【声音】的视频在播=忙
+
+function asrDbg(){
+
+  try{
+
+    if(!asrDbgEl){ asrDbgEl=document.createElement('div');
+
+      asrDbgEl.style.cssText='position:fixed;left:8px;bottom:8px;z-index:40;font:12px/1.4 Consolas,monospace;color:#9fe8ff;background:rgba(0,0,0,.62);padding:4px 8px;border-radius:6px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+
+      asrDbgEl.title='点一下可隐藏/显示';
+
+      asrDbgEl.onclick=function(){ asrDbgEl.style.display='none'; };
+
+      document.body.appendChild(asrDbgEl); }
+
+    asrDbgEl.textContent='ASR 引擎'+(window.Vosk?'✓':'✗')
+
+      +' 模型'+(asrReady?'✓':(asrState||'✗'))
+
+      +' 麦'+(micStream?'✓':'✗')
+
+      +' 音频'+(audioCtx?audioCtx.state:'✗')
+
+      +' 停'+(listenPaused?'1':'0')+' 忙'+(audioBusy()?'1':'0')
+
+      +' | 最近:'+(window.__lastASR||'—');
+
+  }catch(_){}
+
+}
+
+function asrSetLive(txt){ try{ micstate.classList.add('live'); mictxt.textContent=txt||'离线语音聆听中'; }catch(_){} asrDbg(); }
+
+async function initASR(){
+
+  if(!window.Vosk){ asrState='无Vosk'; mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; asrDbg(); return; }
+
+  /* 关键：主线程先 fetch 模型 → Blob → createModel(blobURL)。
+
+     worker 直接拉取在 GitHub Pages 上会挂起，主线程 fetch 正常。 */
+
+  let blobUrl=null;
+
+  try{
+
+    asrState='下载中'; mictxt.textContent='正在下载离线语音模型…（约44MB）'; asrDbg();
+
+    const resp = await fetch(ASR_MODEL_URL, {cache:'force-cache'});
+
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+
+    const total = +(resp.headers.get('content-length')||0);
+
+    let blob;
+
+    if(resp.body && resp.body.getReader){
+
+      const reader=resp.body.getReader(); const chunks=[]; let got=0;
+
+      for(;;){ const r=await reader.read(); if(r.done) break; chunks.push(r.value); got+=r.value.length;
+
+        asrState = total ? ('下载'+Math.round(got/total*100)+'%') : '下载中';
+
+        if(total) mictxt.textContent='正在下载离线语音模型… '+Math.round(got/total*100)+'%';
+
+        if(total && got>=total) break; }
+
+      blob=new Blob(chunks,{type:'application/gzip'});
+
+    } else { blob=await resp.blob(); }
+
+    blobUrl=URL.createObjectURL(blob);
+
+  }catch(e){ asrState='下载失败'; mictxt.textContent='离线模型下载失败：'+((e&&e.message)||e); asrDbg(); return; }
+
+  try{
+
+    asrState='初始化'; mictxt.textContent='正在初始化语音模型…'; asrDbg();
+
+    asrModel = await Vosk.createModel(blobUrl);
+
+    asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; asrDbg(); });
+
+    asrReady = true; asrState=''; asrDbg();
+
+    startVoskMic();
+
+  }catch(e){
+
+    asrState='加载失败'; mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
+
+  }
+
+}
+
+function startVoskMic(){
+
+  try{ asrRecog = new asrModel.KaldiRecognizer(16000); }catch(e){ mictxt.textContent='识别器创建失败：'+((e&&e.message)||e); asrDbg(); return; }
+
+  asrRecog.on('result', (m)=>{
+
+    const t=((m.result && m.result.text)||'').trim();
+
+    if(!t) return;
+
+    window.__lastASR=t; heardEl.textContent='听到：'+t; asrDbg();
+
+    if(listenPaused || audioBusy()) return;   // 有声视频在播/手动停 → 不响应
+
+    if(isAgentLine(t)) return;                // 回声过滤
+
+    handleText(t, {interim:false});
+
+  });
+
+  asrRecog.on('partialresult', (m)=>{
+
+    const p=((m.result && m.result.partial)||'').trim();
+
+    if(p){ window.__part=p; if(!listenPaused && !audioBusy()) heardEl.textContent='…'+p; }
+
+  });
+
+  navigator.mediaDevices.getUserMedia({ video:false, audio:{ echoCancellation:true, noiseSuppression:true, channelCount:1, sampleRate:16000 } })
+
+    .then(stream=>{
+
+      micStream=stream;
+
+      const AC = window.AudioContext||window.webkitAudioContext;
+
+      audioCtx = new AC({ sampleRate:16000 });
+
+      const source = audioCtx.createMediaStreamSource(stream);
+
+      asrFeed = audioCtx.createScriptProcessor(4096,1,1);
+
+      asrFeed.onaudioprocess = (ev)=>{ if(listenPaused || audioBusy()) return; window.__feed=(window.__feed||0)+1; try{ asrRecog.acceptWaveform(ev.inputBuffer); }catch(e){ window.__feedE=(window.__feedE||0)+1; } };
+
+      micSink = audioCtx.createGain(); micSink.gain.value=0;   // 静音接地：保证回调触发且不回声
+
+      source.connect(asrFeed); asrFeed.connect(micSink); micSink.connect(audioCtx.destination);
+
+      if(audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
+
+      asrSetLive('离线语音聆听中');
+
+    })
+
+    .catch((e)=>{ mictxt.textContent='麦克风未授权或不可用'; asrDbg(); });
+
+}
+
+/* 兜底：浏览器自动播放策略会让 AudioContext 变 suspended，任何交互都尝试恢复 */
+
+document.addEventListener('pointerdown', function(){ try{ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} asrDbg(); });
+
+document.addEventListener('keydown', function(e){ if(e.key==='d'||e.key==='D'){ try{ if(asrDbgEl) asrDbgEl.style.display=(asrDbgEl.style.display==='none'?'block':'none'); }catch(_){} } });
+
+setInterval(asrDbg, 1200);
+
+/* 自检钩子：#asrtest 时自动开始并把状态写入标题（仅用于自动化验证，不影响正常使用） */
+
+if(location.hash.indexOf('asrtest')>=0){
+
+  setTimeout(function(){ try{ document.getElementById('startBtn').click(); }catch(_){} }, 400);
+
+  setInterval(function(){ document.title='ASR '+(asrReady?'模型OK':('模型'+(asrState||'X')))+' 麦'+(micStream?'OK':'X')+' 音'+(audioCtx?audioCtx.state:'X')+' 忙'+(audioBusy()?'1':'0')+' 帧'+(window.__feed||0)+'E'+(window.__feedE||0)+' 最近'+(window.__lastASR||window.__part||'-'); }, 800);
+
+}
+
+
+
+document.getElementById('startBtn').onclick=()=>{
+
+  document.getElementById('start').style.display='none';
+
+  started=true;
+
+  // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
+
+  if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
+
+  else { goIdle(); }
+
+  document.getElementById('navBtns').classList.add('show'); updateSegHud(); warmAll(); warmAllClips();
+
+  if(window.Vosk){ initASR(); }
+
+  else { mictxt.textContent='离线识别未就绪，请用 ☰ 控制台'; }
+
+};
+
+
+
+/* ---------- 控制台：按环节分组 ---------- */
+
+document.getElementById('warmBtn').onclick=()=>{ warming=false; warmAllClips(); };
+
+document.getElementById('openPptBtn').onclick=()=>{
+
+  window.open('viewer.html','pptdeck','width=1280,height=780,menubar=no,toolbar=no');
+
+};
+
+document.getElementById('nextSeg').onclick=e=>{e.stopPropagation();nextEntry(1);};
+
+document.getElementById('prevSeg').onclick=e=>{e.stopPropagation();nextEntry(-1);};
+
+document.getElementById('panelToggle').onclick=()=>{
+
+  document.getElementById('panel').classList.toggle('open');
+
+};
+
+document.getElementById('goIdleBtn').onclick=goIdle;
+
+
+
+function buildPanel(){
+
+  const scroll=document.getElementById('scroll');
+
+  if(!CFG)return;
+
+  const groups={};
+
+  (CFG.items||[]).forEach(it=>{
+
+    (groups[it.seg]=groups[it.seg]||[]).push(it);
+
+  });
+
+  Object.keys(groups).sort().forEach(s=>{
+
+    const g=document.createElement('div');g.className='seg-grp';
+
+    const lab=document.createElement('div');lab.className='seg-label';
+
+    lab.textContent=(SEG_NAME[s]||('环节'+s))+'（'+groups[s].length+'）';
+
+    g.appendChild(lab);
+
+    groups[s].forEach(it=>{
+
+      const b=document.createElement('button');b.className=it.ch||'both';
+
+      b.innerHTML=(it.id+' '+(CH_NAME[it.ch]||''))+'<span class="k">'+
+
+        ((it.subtitle||'').slice(0,22))+'…</span>';
+
+      b.title='口令：'+(it.say||[]).join(' / ');
+
+      b.onclick=()=>{playEntry(it);};
+
+      g.appendChild(b);
+
+    });
+
+    scroll.appendChild(g);
+
+  });
+
+}
+
+buildPanel();
+
+if(CFG&&CFG.idle){player.src=CFG.idle;}
+
+/* 课前缓存：页面一打开就预热全部视频与课件图，等"缓存完毕"再进课堂 */
+
+setWarmLine('课前缓存中… 0 / 7（先存开场要用的）', false);
+
+warmAllClips();
+
+</script>
+
+</body>
+
+</html>
+
