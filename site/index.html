@@ -624,50 +624,74 @@ function handleText(text, opts){
  * 离线语音识别（Vosk / WASM）—— 完全本地运行，不联网，识别整句更稳
  *   · 加载 asr/model.tar.gz（中文小模型）→ 麦克风 → KaldiRecognizer
  *   · 只在【最终结果(result)】触发指令；partial 仅用于显示
- *   · 播放动画时不喂音频(listenPaused) → 天然屏蔽视频配音
+ *   · 只在"没有【有声】视频在播"时才喂音频 → 待机(静音idle)照常聆听，
+ *     动画一停/一静音 立刻恢复，不依赖视频 onended（防卡死）
  * ===================================================================== */
 const ASR_MODEL_URL='asr/model.tar.gz';
-let asrReady=false, asrModel=null, asrRecog=null, audioCtx=null, micStream=null, micSink=null;
-function asrSetLive(txt){ try{ micstate.classList.add('live'); mictxt.textContent=txt||'离线语音聆听中'; }catch(_){} }
-async function initASR(){
-  if(!window.Vosk){ mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; return; }
+let asrReady=false, asrModel=null, asrRecog=null, audioCtx=null, micStream=null, micSink=null, asrFeed=null, asrDbgEl=null;
+window.__lastASR='';
+function audioBusy(){ return !!(player && !player.paused && !player.muted && !player.ended); } // 有【声音】的视频在播=忙
+function asrDbg(){
   try{
-    mictxt.textContent='正在加载离线语音模型…（首次约 44MB）';
+    if(!asrDbgEl){ asrDbgEl=document.createElement('div');
+      asrDbgEl.style.cssText='position:fixed;left:8px;bottom:8px;z-index:40;font:12px/1.4 Consolas,monospace;color:#9fe8ff;background:rgba(0,0,0,.62);padding:4px 8px;border-radius:6px;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+      asrDbgEl.title='点一下可隐藏/显示';
+      asrDbgEl.onclick=function(){ asrDbgEl.style.display='none'; };
+      document.body.appendChild(asrDbgEl); }
+    asrDbgEl.textContent='ASR 引擎'+(window.Vosk?'✓':'✗')
+      +' 模型'+(asrReady?'✓':(asrModel?'载入中':'✗'))
+      +' 麦'+(micStream?'✓':'✗')
+      +' 音频'+(audioCtx?audioCtx.state:'✗')
+      +' 停'+(listenPaused?'1':'0')+' 忙'+(audioBusy()?'1':'0')
+      +' | 最近:'+(window.__lastASR||'—');
+  }catch(_){}
+}
+function asrSetLive(txt){ try{ micstate.classList.add('live'); mictxt.textContent=txt||'离线语音聆听中'; }catch(_){} asrDbg(); }
+async function initASR(){
+  if(!window.Vosk){ mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; asrDbg(); return; }
+  try{
+    mictxt.textContent='正在加载离线语音模型…（首次约 44MB）'; asrDbg();
     asrModel = await Vosk.createModel(ASR_MODEL_URL);
-    asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; });
-    asrReady = true;
+    asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; asrDbg(); });
+    asrReady = true; asrDbg();
     startVoskMic();
   }catch(e){
-    mictxt.textContent='离线语音模型加载失败，请用右下角 ☰ 控制台';
+    mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
   }
 }
 function startVoskMic(){
-  try{ asrRecog = new asrModel.KaldiRecognizer(); }catch(e){ mictxt.textContent='识别器创建失败'; return; }
+  try{ asrRecog = new asrModel.KaldiRecognizer(); }catch(e){ mictxt.textContent='识别器创建失败：'+((e&&e.message)||e); asrDbg(); return; }
   asrRecog.on('result', (m)=>{
     const t=((m.result && m.result.text)||'').trim();
     if(!t) return;
-    heardEl.textContent='听到：'+t;
-    if(listenPaused || (playing && !player.paused)) return;   // 播放中不响应
-    if(isAgentLine(t)) return;                                 // 回声过滤
+    window.__lastASR=t; heardEl.textContent='听到：'+t; asrDbg();
+    if(listenPaused || audioBusy()) return;   // 有声视频在播/手动停 → 不响应
+    if(isAgentLine(t)) return;                // 回声过滤
     handleText(t, {interim:false});
   });
   asrRecog.on('partialresult', (m)=>{
     const p=((m.result && m.result.partial)||'').trim();
-    if(p && !listenPaused) heardEl.textContent='…'+p;          // 中间结果仅显示
+    if(p && !listenPaused && !audioBusy()) heardEl.textContent='…'+p;
   });
   navigator.mediaDevices.getUserMedia({ video:false, audio:{ echoCancellation:true, noiseSuppression:true, channelCount:1, sampleRate:16000 } })
     .then(stream=>{
       micStream=stream;
-      audioCtx = new AudioContext();
+      const AC = window.AudioContext||window.webkitAudioContext;
+      audioCtx = new AC({ sampleRate:16000 });
       const source = audioCtx.createMediaStreamSource(stream);
-      const node = audioCtx.createScriptProcessor(4096,1,1);
-      node.onaudioprocess = (ev)=>{ if(listenPaused) return; try{ asrRecog.acceptWaveform(ev.inputBuffer); }catch(_){} };
-      const sink = audioCtx.createGain(); sink.gain.value=0;   // 静音接地，保证处理但不回声
-      source.connect(node); node.connect(sink); sink.connect(audioCtx.destination);
+      asrFeed = audioCtx.createScriptProcessor(4096,1,1);
+      asrFeed.onaudioprocess = (ev)=>{ if(listenPaused || audioBusy()) return; try{ asrRecog.acceptWaveform(ev.inputBuffer); }catch(_){} };
+      micSink = audioCtx.createGain(); micSink.gain.value=0;   // 静音接地：保证回调触发且不回声
+      source.connect(asrFeed); asrFeed.connect(micSink); micSink.connect(audioCtx.destination);
+      if(audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
       asrSetLive('离线语音聆听中');
     })
-    .catch(()=>{ mictxt.textContent='麦克风未授权，请用 ☰ 控制台'; });
+    .catch((e)=>{ mictxt.textContent='麦克风未授权或不可用'; asrDbg(); });
 }
+/* 兜底：浏览器自动播放策略会让 AudioContext 变 suspended，任何交互都尝试恢复 */
+document.addEventListener('pointerdown', function(){ try{ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} asrDbg(); });
+document.addEventListener('keydown', function(e){ if(e.key==='d'||e.key==='D'){ try{ if(asrDbgEl) asrDbgEl.style.display=(asrDbgEl.style.display==='none'?'block':'none'); }catch(_){} } });
+setInterval(asrDbg, 1200);
 
 document.getElementById('startBtn').onclick=()=>{
   document.getElementById('start').style.display='none';
