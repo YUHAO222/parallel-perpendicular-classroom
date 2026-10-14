@@ -711,6 +711,11 @@ function startVoskMic(){
 document.addEventListener('pointerdown', function(){ try{ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }catch(_){} asrDbg(); });
 document.addEventListener('keydown', function(e){ if(e.key==='d'||e.key==='D'){ try{ if(asrDbgEl) asrDbgEl.style.display=(asrDbgEl.style.display==='none'?'block':'none'); }catch(_){} } });
 setInterval(asrDbg, 1200);
+/* 自检钩子：#asrtest 时自动开始并把状态写入标题（仅用于自动化验证，不影响正常使用） */
+if(location.hash.indexOf('asrtest')>=0){
+  setTimeout(function(){ try{ document.getElementById('startBtn').click(); }catch(_){} }, 400);
+  setInterval(function(){ document.title='ASR '+(asrReady?'模型OK':('模型'+(asrState||'X')))+' 麦'+(micStream?'OK':'X')+' 音'+(audioCtx?audioCtx.state:'X'); }, 800);
+}
 
 document.getElementById('startBtn').onclick=()=>{
   document.getElementById('start').style.display='none';
