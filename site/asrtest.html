@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>asr-start</title></head>
+<body><div id="log">start</div>
+<script src="asr/vosk.js"></script>
+<script>
+function report(s){ document.title=s; var l=document.getElementById('log'); if(l) l.textContent=s; }
+report('js:'+(typeof Vosk));
+try{
+  Vosk.createModel('asr/model.tar.gz').then(function(m){
+    report('MODEL_OK');
+    try{ new m.KaldiRecognizer(); report('RECOG_OK'); }catch(e){ report('RECOG_ERR:'+((e&&e.message)||e)); }
+  }).catch(function(e){ report('MODEL_ERR:'+((e&&e.message)||e)); });
+}catch(e){ report('EXC:'+((e&&e.message)||e)); }
+</script>
+</body></html>
