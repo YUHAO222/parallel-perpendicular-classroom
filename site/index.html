@@ -50,6 +50,7 @@
   .btn{cursor:pointer;border:none;border-radius:999px;padding:15px 44px;font-size:19px;font-weight:800;letter-spacing:2px;color:#1a1206;
     background:linear-gradient(90deg,var(--wk),#ffd76b);box-shadow:0 10px 30px rgba(255,180,40,.4);transition:transform .2s;}
   .btn:active{transform:scale(.96);}
+  .btn.wait,.btn[disabled]{opacity:.55;cursor:progress;box-shadow:none;}
   .nospeech{color:#ff9c7a;font-size:13px;max-width:540px;line-height:1.7;}
   /* ===== 教师控制台（可收起，投屏时几乎不可见）===== */
   .panel-toggle{position:fixed;right:14px;bottom:14px;z-index:45;cursor:pointer;
@@ -152,6 +153,11 @@
     border-radius:8px;padding:3px 10px;font-size:13px;}
   #cubeWin .cbar button:hover{background:rgba(255,255,255,.2);}
   #cubeWin iframe{flex:1;width:100%;border:0;background:#08111f;}
+  /* 透明度三档：默认半透明，能透出后面的动画；要看清线条可切"实心" */
+  #cubeWin.op-solid{opacity:1;}
+  #cubeWin.op-half{opacity:.68;}
+  #cubeWin.op-glass{opacity:.42;}
+  #cubeWin .cbar button.op{border-color:rgba(120,200,255,.55);color:#bfe6ff;}
 
 </style>
 </head>
@@ -197,6 +203,7 @@
       <b>🧊 3D 立方体 · 平行与垂直</b>
       <span class="hint2">拖标题栏移动 · 右下角拉伸 · 与动画同时显示</span>
       <span class="grow"></span>
+      <button id="cubeAlpha" class="op" title="窗口透明度：实心 / 半透明 / 更透（半透明时能透出后面的课堂动画）">透明度：半透明</button>
       <button id="cubeBig" title="全屏/还原">全屏</button>
       <button id="cubePop" title="在新窗口打开（可拖到副屏）">新窗口</button>
       <button id="cubeClose" title="收起">✕</button>
@@ -214,7 +221,8 @@
     <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
        开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
        讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。<br/>
-       每段先播<b>动画</b>，播完自动展开<b>这一段对应的课件页</b>；在课件里 <b>点一下画面＝出现下一句</b>（复刻 PPT 的单击动画），出现完按<b>「下一个节点」</b>继续 —— 全程只靠点击也能上完一整节课。</p>
+       每段先播<b>动画</b>，播完自动展开<b>这一段对应的课件页</b>；在课件里 <b>点一下画面＝出现下一句</b>（复刻 PPT 的单击动画），出现完按<b>「下一个节点」</b>继续 —— 全程只靠点击也能上完一整节课。<br/>
+       进入前会先把<b>开场视频</b>和<b>离线语音模型（约 44MB）</b>一起缓存好，按钮亮起再进；进去就能直接说话。</p>
     <button class="btn" id="startBtn">进入课堂</button>
     <div class="warmline" id="warmLine"><span class="sp"></span><span id="warmTxt">正在课前缓存…</span></div>
     <p class="nospeech" id="nospeech" style="display:none;">
@@ -347,10 +355,42 @@ function setWarmTip(txt, hold){
   if(txt){ el.textContent=txt; el.style.display='block'; }
   if(hold){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, hold); }
 }
+/* ---------- 进课堂闸门：视频 + 离线语音模型都就绪才放行 ----------
+   老师的要求：语音预加载也要加载完才能进入课堂（否则进去先说不了话）。
+   判断：warmReady（开场视频+课件图缓存完） && asrReady（Vosk 模型下载并初始化完）
+   失败时（浏览器不支持解锁、模型下载失败）放行，但按钮上写明"语音不可用"。 */
+let warmReady=false, warmLineTxt='课前缓存中…', asrGateState='loading', asrTxt='排队中…';
+const GATE_OFF = /[?&]gate=0/.test(location.search) || location.hash.indexOf('asrtest') >= 0;
+function asrGateOk(){ return asrReady || asrGateState === 'failed' || asrGateState === 'none'; }
+function gateReady(){ return warmReady && asrGateOk(); }
+function updateStartGate(){
+  const b=document.getElementById('startBtn'); if(!b) return;
+  const ok=gateReady();
+  b.disabled = (!ok && !GATE_OFF);
+  b.classList.toggle('wait', !ok && !GATE_OFF);
+  if(ok) b.textContent = asrReady ? '开始上课 ✓' : '开始上课（语音不可用）';
+  else b.textContent = '准备中…';
+}
+function renderWarmLine(){
+  const el=document.getElementById('warmTxt');
+  const ok=gateReady();
+  if(el){
+    if(ok){
+      el.textContent = asrReady
+        ? '已就绪：开场视频 + 离线语音模型都加载完了 ✓（后台继续缓存其余片段，不影响上课）'
+        : '已就绪：开场视频已缓存 ✓　·　离线语音不可用（'+(asrTxt||'未加载')+'），请用右下角 ☰ 控制台';
+    } else {
+      el.textContent = '视频 ' + (warmReady ? '已就绪 ✓' : '缓存中 · ' + warmLineTxt) +
+                       '　·　语音模型 ' + (asrTxt || '准备中…');
+    }
+  }
+  const box=document.getElementById('warmLine'); if(box) box.classList.toggle('done', ok);
+  updateStartGate();
+}
 function setWarmLine(txt, done){
-  const el=document.getElementById('warmTxt'); if(el) el.textContent=txt;
-  const box=document.getElementById('warmLine'); if(box) box.classList.toggle('done', !!done);
-  const b=document.getElementById('startBtn'); if(b) b.textContent = done ? '开始上课 ✓' : '进入课堂';
+  warmLineTxt = txt || warmLineTxt;
+  warmReady = !!done;
+  renderWarmLine();
 }
 function dlOne(src){
   return new Promise(res=>{
@@ -711,8 +751,26 @@ function tryAnswerCommand(text){
   return true;
 }
 /* ---------- 3D 立方体工具窗（cube-3d，与动画同时显示）---------- */
+/* 透明度三档，默认半透明（能透出后面的动画）；老师点一下切换，选择记在 localStorage */
+const CUBE_ALPHA=[['op-solid','实心'],['op-half','半透明'],['op-glass','更透']];
+let cubeAlphaIdx=1;
+try{ const v=parseInt(localStorage.getItem('cubeAlphaIdx'),10); if(v>=0&&v<3) cubeAlphaIdx=v; }catch(e){}
+function applyCubeAlpha(){
+  const w=document.getElementById('cubeWin'); if(!w) return;
+  CUBE_ALPHA.forEach(a=>w.classList.remove(a[0]));
+  w.classList.add(CUBE_ALPHA[cubeAlphaIdx][0]);
+  const b=document.getElementById('cubeAlpha'); if(b) b.textContent='透明度：'+CUBE_ALPHA[cubeAlphaIdx][1];
+}
+document.getElementById('cubeAlpha').onclick=e=>{
+  e.stopPropagation();
+  cubeAlphaIdx=(cubeAlphaIdx+1)%CUBE_ALPHA.length;
+  try{ localStorage.setItem('cubeAlphaIdx', String(cubeAlphaIdx)); }catch(_){}
+  applyCubeAlpha();
+};
+applyCubeAlpha();
 function openCube(){
   const w=document.getElementById('cubeWin'), f=document.getElementById('cubeFrame');
+  applyCubeAlpha();
   if(f){ const cur=f.getAttribute('src');
     if(!cur || cur==='about:blank') f.setAttribute('src','cube3d/index.html'); }
   if(w) w.classList.add('show');
@@ -927,36 +985,66 @@ function asrDbg(){
   }catch(_){}
 }
 function asrSetLive(txt){ try{ micstate.classList.add('live'); mictxt.textContent=txt||'离线语音聆听中'; }catch(_){} asrDbg(); }
-async function initASR(){
-  if(!window.Vosk){ asrState='无Vosk'; mictxt.textContent='离线识别脚本未加载，请用 ☰ 控制台'; asrDbg(); return; }
-  /* 关键：主线程先 fetch 模型 → Blob → createModel(blobURL)。
-     worker 直接拉取在 GitHub Pages 上会挂起，主线程 fetch 正常。 */
-  let blobUrl=null;
-  try{
-    asrState='下载中'; mictxt.textContent='正在下载离线语音模型…（约44MB）'; asrDbg();
-    const resp = await fetch(ASR_MODEL_URL, {cache:'force-cache'});
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const total = +(resp.headers.get('content-length')||0);
-    let blob;
-    if(resp.body && resp.body.getReader){
-      const reader=resp.body.getReader(); const chunks=[]; let got=0;
-      for(;;){ const r=await reader.read(); if(r.done) break; chunks.push(r.value); got+=r.value.length;
-        asrState = total ? ('下载'+Math.round(got/total*100)+'%') : '下载中';
-        if(total) mictxt.textContent='正在下载离线语音模型… '+Math.round(got/total*100)+'%';
-        if(total && got>=total) break; }
-      blob=new Blob(chunks,{type:'application/gzip'});
-    } else { blob=await resp.blob(); }
-    blobUrl=URL.createObjectURL(blob);
-  }catch(e){ asrState='下载失败'; mictxt.textContent='离线模型下载失败：'+((e&&e.message)||e); asrDbg(); return; }
-  try{
-    asrState='初始化'; mictxt.textContent='正在初始化语音模型…'; asrDbg();
-    asrModel = await Vosk.createModel(blobUrl);
-    asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; asrDbg(); });
-    asrReady = true; asrState=''; asrDbg();
-    startVoskMic();
-  }catch(e){
-    asrState='加载失败'; mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
-  }
+function setAsrTxt(t){ asrTxt=t; asrDbg(); renderWarmLine(); }
+/* 预加载（进课堂前就跑）：只下载 + 初始化模型，不要麦克风权限 */
+let asrLoadPromise=null;
+const ASR_WAIT_MAX = 180000;                 // 模型 180 秒还没好就不再拦着老师
+function loadASRModel(){
+  if(asrLoadPromise) return asrLoadPromise;
+  asrLoadPromise=(async function(){
+    if(!window.Vosk){ asrGateState='none'; setAsrTxt('本机浏览器不支持离线识别'); return; }
+    const guard = setTimeout(function(){
+      if(!asrReady && asrGateState!=='failed'){
+        asrGateState='failed'; setAsrTxt('超时（可先用控制台）');
+        mictxt.textContent='离线语音模型加载超时，请用 ☰ 控制台；网络好了刷新即自动重试';
+      }
+    }, ASR_WAIT_MAX);
+    try{ await loadASRModelInner(); } finally { clearTimeout(guard); }
+    renderWarmLine();
+  })();
+  return asrLoadPromise;
+}
+async function loadASRModelInner(){
+    /* 关键：主线程先 fetch 模型 → Blob → createModel(blobURL)。
+       worker 直接拉取在 GitHub Pages 上会挂起，主线程 fetch 正常。 */
+    let blobUrl=null;
+    try{
+      setAsrTxt('下载中…');
+      const resp = await fetch(ASR_MODEL_URL, {cache:'force-cache'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const total = +(resp.headers.get('content-length')||0);
+      let blob;
+      if(resp.body && resp.body.getReader){
+        const reader=resp.body.getReader(); const chunks=[]; let got=0;
+        for(;;){ const r=await reader.read(); if(r.done) break; chunks.push(r.value); got+=r.value.length;
+          setAsrTxt(total ? ('下载 '+Math.round(got/total*100)+'%') : '下载中…');
+          if(total && got>=total) break; }
+        blob=new Blob(chunks,{type:'application/gzip'});
+      } else { blob=await resp.blob(); }
+      blobUrl=URL.createObjectURL(blob);
+    }catch(e){
+      asrGateState='failed'; setAsrTxt('下载失败');
+      mictxt.textContent='离线模型下载失败：'+((e&&e.message)||e); asrDbg(); return;
+    }
+    try{
+      setAsrTxt('初始化…');
+      asrModel = await Vosk.createModel(blobUrl);
+      asrModel.on('error', ()=>{ mictxt.textContent='语音模型出错，请用 ☰ 控制台'; asrDbg(); });
+      asrReady = true; asrState=''; asrGateState='ready'; setAsrTxt('已就绪');
+      if(started && !micStream) startVoskMic();       // 老师已经进去过了就顺手开麦
+    }catch(e){
+      asrGateState='failed'; setAsrTxt('初始化失败');
+      mictxt.textContent='离线语音模型加载失败：'+((e&&e.message)||e); asrDbg();
+    }
+}
+/* 进课堂后才要麦克风权限（浏览器要求用户手势） */
+function startASR(){
+  if(micStream) return;
+  if(asrReady){ startVoskMic(); return; }
+  loadASRModel().then(function(){
+    if(asrReady) startVoskMic();
+    else { mictxt.textContent='离线语音未就绪，请用 ☰ 控制台'; asrDbg(); }
+  });
 }
 function startVoskMic(){
   try{ asrRecog = new asrModel.KaldiRecognizer(16000); }catch(e){ mictxt.textContent='识别器创建失败：'+((e&&e.message)||e); asrDbg(); return; }
@@ -1007,16 +1095,20 @@ if(location.hash.indexOf('asrtest')>=0){
     setInterval(function(){ document.title='ASR '+(asrReady?'模型OK':('模型'+(asrState||'X')))+' 麦'+(micStream?'OK':'X')+' 音'+(audioCtx?audioCtx.state:'X')+' 忙'+(audioBusy()?'1':'0')+' 帧'+(window.__feed||0)+'E'+(window.__feedE||0)+' 最近'+(window.__lastASR||window.__part||'-'); }, 800);
   }
 }
-document.getElementById('startBtn').onclick=()=>{
+function startClass(){
   document.getElementById('start').style.display='none';
   started=true;
   // 开场：先播「空场景→双角色出场」，播完进待机（双角色静止）
   if(CFG&&CFG.entrance){ playing=true; playSrc(CFG.entrance,{loop:false,muted:false,onend:goIdle}); }
   else { goIdle(); }
   document.getElementById('navBtns').classList.add('show'); updateSegHud(); warmAll(); warmAllClips();
-  if(window.Vosk){ initASR(); }
-  else { mictxt.textContent='离线识别未就绪，请用 ☰ 控制台'; }
+  startASR();                                  // 模型已在课前预加载好，这里只要麦克风权限
+}
+document.getElementById('startBtn').onclick=()=>{
+  if(!gateReady() && !GATE_OFF){ renderWarmLine(); return; }   // 视频/语音模型没加载完不让进
+  startClass();
 };
+window.startClass=startClass;
 /* ---------- 控制台：按环节分组 ---------- */
 document.getElementById('warmBtn').onclick=()=>{ warming=false; warmAllClips(); };
 document.getElementById('openPptBtn').onclick=()=>{
@@ -1055,8 +1147,10 @@ function buildPanel(){
 buildPanel();
 buildAnswerBar();
 if(CFG&&CFG.idle){player.src=CFG.idle;}
-/* 课前缓存：页面一打开就预热全部视频与课件图，等"缓存完毕"再进课堂 */
+/* 课前缓存：页面一打开就预热开场视频 + 课件图，同时把离线语音模型也下载好；
+   两者都就绪，「进入课堂」才会亮（老师的原话：语音预加载也要加载完才能进入课堂） */
 setWarmLine('课前缓存中… 0 / 7（先存开场要用的）', false);
+loadASRModel();
 warmAllClips();
 </script>
 </body>
