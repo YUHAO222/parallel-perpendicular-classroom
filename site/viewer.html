@@ -6,6 +6,8 @@
     font-family:"Microsoft YaHei",system-ui,sans-serif;color:#e8eefb;}
   #stage{position:absolute;inset:0 0 56px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   #stage img{max-width:96%;max-height:96%;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.7);}
+  #stage iframe{width:98%;height:98%;border:0;border-radius:10px;background:#0b1220;
+    box-shadow:0 20px 60px rgba(0,0,0,.7);}
   #bar{position:absolute;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:12px;
     padding:0 16px;background:rgba(12,18,32,.96);border-top:1px solid rgba(255,255,255,.12);}
   #bar button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.2);
@@ -20,14 +22,22 @@
 <body>
   <div id="stage"><img id="img" alt="PPT 页面"/></div>
   <div id="bar">
-    <span class="t">《平行与垂直》课堂 PPT</span>
+    <span class="t">《平行与垂直》课堂 PPT（冯晴老师课件 28 页 + 精确图 15 张）</span>
     <button id="prev">◀ 上一页</button><span class="p" id="page"></span><button id="next">下一页 ▶</button>
     <button id="full">全屏</button>
     <span class="g"></span><span id="name" style="font-size:12px;color:#8ea0c4"></span>
   </div>
-  <div id="tip">← → / 空格 翻页 · 点画面右半边下一页 · F 全屏 · Esc 退出全屏</div>
+  <div id="tip">← → / 空格 翻页 · 点画面右半边下一页 · 互动页（第17页）内可单击显示标注 · F 全屏</div>
 <script>
 const DECK=[
+ /* 冯晴老师课件（导出的 28 页），第 17 页换成可点击互动版 */
+ "deck/cq01.png","deck/cq02.png","deck/cq03.png","deck/cq04.png","deck/cq05.png","deck/cq06.png",
+ "deck/cq07.png","deck/cq08.png","deck/cq09.png","deck/cq10.png","deck/cq11.png","deck/cq12.png",
+ "deck/cq13.png","deck/cq14.png","deck/cq15.png","deck/cq16.png",
+ "deck/p17_angles.html",
+ "deck/cq18.png","deck/cq19.png","deck/cq20.png","deck/cq21.png","deck/cq22.png","deck/cq23.png",
+ "deck/cq24.png","deck/cq25.png","deck/cq26.png","deck/cq27.png","deck/cq28.png",
+ /* 课堂用的精确图（直角符号 a∥b a⊥b 垂足 学生作品 思维导图） */
  "slides/00_封面.png","slides/01_环节二_判断练习.png","slides/02_环节五_第一题.png",
  "slides/03_环节五_第二题_判断.png","slides/04_环节五_第三题_迷宫.png","slides/05_环节六_思维导图.png",
  "slides/06_学生作品_手画直线.png","slides/07_学生作品_编号1.png","slides/08_学生作品_编号2.png",
@@ -35,11 +45,21 @@ const DECK=[
  "slides/12_第一题_答案一.png","slides/13_第一题_答案二.png","slides/14_迷宫作品_几何大冒险.png"];
 let i=0;
 const stage=document.getElementById('stage'),img=document.getElementById('img');
+function isHtml(p){ return /\.html?($|\?|#)/i.test(p||''); }
 function show(n){
   i=Math.max(0,Math.min(DECK.length-1,n));
-  img.src=DECK[i];
+  const src=DECK[i], f=document.getElementById('frame');
+  if(isHtml(src)){
+    img.style.display='none';
+    if(f){ f.setAttribute('src',src); f.style.display=''; }
+    else { const nf=document.createElement('iframe'); nf.id='frame'; nf.setAttribute('src',src);
+      stage.appendChild(nf); }
+  } else {
+    if(f) f.style.display='none';
+    img.style.display=''; img.src=src;
+  }
   document.getElementById('page').textContent=(i+1)+' / '+DECK.length;
-  document.getElementById('name').textContent=DECK[i].split('/').pop().replace(/\.png$/,'');
+  document.getElementById('name').textContent=src.split('/').pop().replace(/\.(png|html?)$/,'');
   document.getElementById('prev').disabled=(i===0);
   document.getElementById('next').disabled=(i===DECK.length-1);
 }
@@ -50,7 +70,8 @@ document.getElementById('full').onclick=e=>{
   if(document.fullscreenElement){document.exitFullscreen();}
   else{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();}
 };
-stage.onclick=e=>{const r=stage.getBoundingClientRect();
+stage.onclick=e=>{ if(isHtml(DECK[i])) return;            // 互动页自己处理点击
+  const r=stage.getBoundingClientRect();
   show(e.clientX < r.left+r.width/2 ? i-1 : i+1);};
 window.addEventListener('wheel',e=>{show(i+(e.deltaY>0?1:-1));},{passive:true});
 window.addEventListener('keydown',e=>{
