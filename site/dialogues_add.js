@@ -57,6 +57,15 @@
 
   /* ---------- B. 改造节点：台词与课件页对齐 ---------- */
   var n;
+  /* 《要求》第 8 条：老师说「猪八戒，请你来点评一下」就要点评两份答案（先第一份） */
+  n = byId("5-2a");
+  if (n) ["猪八戒请你来点评一下", "请你来点评一下", "来点评一下", "点评一下",
+          "点评这两份答案", "请你点评这两份答案", "猪八戒请你点评"].forEach(function(k){
+    if (n.say.indexOf(k) < 0) n.say.push(k);
+  });
+  n = byId("5-2b"); if (n) ["第二份答案", "点评第二份答案"].forEach(function(k){
+    if (n.say.indexOf(k) < 0) n.say.push(k);
+  });
   n = byId("5-2b"); if (n) n.subtitle = "第二份答案中，这一组直线其实是相交的，因为延长后会相交。同学们，你们说是不是？";
   n = byId("5-5");  if (n) n.subtitle = "这道题，我找同学来回答！";
   ["5-4","5-5"].forEach(function(id){ var q=byId(id); if(q){ q.quiz = true; } });
