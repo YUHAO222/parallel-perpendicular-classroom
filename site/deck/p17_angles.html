@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>相交的线 · 单击显示锐角 / 钝角 / 直角</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b1220;overflow:hidden;
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  #wrap{position:relative;width:100%;max-width:calc((100vh - 40px) * 1279 / 720);aspect-ratio:1279/720;}
+  #wrap img{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  svg{position:absolute;inset:0;width:100%;height:100%;}
+  .g{opacity:0;transition:opacity .4s ease;}
+  .g.show{opacity:1;}
+  .lbl{font-weight:800;font-size:30px;letter-spacing:2px;paint-order:stroke;stroke:#fff;stroke-width:8px;
+    stroke-linejoin:round;text-anchor:middle;}
+  .deg{font-weight:700;font-size:20px;paint-order:stroke;stroke:#fff;stroke-width:7px;stroke-linejoin:round;text-anchor:middle;}
+  .tip{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);color:#dbe6f7;font-size:15px;white-space:nowrap;
+    background:rgba(10,16,30,.72);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 18px;user-select:none;}
+  .tipb{color:#ffd88a;border-color:rgba(255,176,32,.55);}
+</style>
+</head>
+<body>
+<div id="stage"><div id="wrap">
+  <img id="bg" src="cq17.png" alt="P17 相交的线" />
+  <!-- 坐标系与 PPT 第17页渲染图一致：1279 x 720 -->
+  <svg viewBox="0 0 1279 720" preserveAspectRatio="none">
+
+    <!-- 左组：交点(476,451)，两线方向 26.5° / 159.0° -->
+    <g id="g1" class="g">
+      <path d="M517.2 471.5 A46 46 0 0 1 433.1 467.5" fill="none" stroke="#e0483a" stroke-width="4"/>
+      <text class="lbl" x="472" y="536" fill="#e0483a">钝角</text>
+      <text class="deg" x="472" y="560" fill="#e0483a">132.5°</text>
+      <path d="M433.1 467.5 A46 46 0 0 1 434.8 430.5" fill="none" stroke="#1f8fd8" stroke-width="4"/>
+      <text class="lbl" x="396" y="446" fill="#1f8fd8">锐角</text>
+      <text class="deg" x="396" y="470" fill="#1f8fd8">47.5°</text>
+      <circle cx="476" cy="451" r="5" fill="#111"/>
+    </g>
+
+    <!-- 中组：交点(688,437)，两线方向 68.5° / 124.5° -->
+    <g id="g2" class="g">
+      <path d="M704.9 479.8 A46 46 0 0 1 661.9 474.9" fill="none" stroke="#e0483a" stroke-width="4"/>
+      <text class="lbl" x="690" y="544" fill="#e0483a">钝角</text>
+      <text class="deg" x="690" y="568" fill="#e0483a">124°</text>
+      <path d="M661.9 474.9 A46 46 0 0 1 671.1 394.2" fill="none" stroke="#1f8fd8" stroke-width="4"/>
+      <text class="lbl" x="600" y="424" fill="#1f8fd8">锐角</text>
+      <text class="deg" x="600" y="448" fill="#1f8fd8">56°</text>
+      <circle cx="688" cy="437" r="5" fill="#111"/>
+    </g>
+
+    <!-- 右组：交点(920,458)，水平线与竖直线相交成直角 -->
+    <g id="g3" class="g">
+      <path d="M949 458 L949 429 L920 429" fill="none" stroke="#12a150" stroke-width="5"/>
+      <text class="lbl" x="1002" y="424" fill="#12a150">直角</text>
+      <text class="deg" x="1002" y="448" fill="#12a150">90°</text>
+      <circle cx="920" cy="458" r="5" fill="#111"/>
+    </g>
+
+    <!-- 单击「继续」后的结论条 -->
+    <g id="law" class="g">
+      <rect x="352" y="612" width="576" height="50" rx="14" fill="#fff8d6" stroke="#ffb020" stroke-width="3"/>
+      <text x="640" y="645" text-anchor="middle" font-size="24" font-weight="800" fill="#0d3b66">
+        两条直线相交：可以成锐角、钝角；相交成直角时，叫互相垂直
+      </text>
+    </g>
+  </svg>
+  <div class="tip" id="tip">单击画面：显示 锐角 / 钝角 / 直角（含直角符号）</div>
+</div></div>
+
+<script>
+  var step = 0, tip = document.getElementById('tip');
+  function toggle(ids, show, stagger){
+    ids.forEach(function(id, i){
+      var el = document.getElementById(id);
+      setTimeout(function(){ el.classList.toggle('show', show); }, show ? i*(stagger||260) : 0);
+    });
+  }
+  function reset(){
+    step = 0; toggle(['g1','g2','g3','law'], false);
+    tip.className = 'tip';
+    tip.textContent = '单击画面：显示 锐角 / 钝角 / 直角（含直角符号）';
+  }
+  function advance(){
+    step++;
+    if (step === 1){
+      toggle(['g1','g2','g3'], true);
+      tip.className = 'tip tipb';
+      tip.textContent = '锐角 / 钝角 / 直角 —— 直角必须画出直角符号 · 再次单击继续';
+    } else if (step === 2){
+      toggle(['law'], true);
+      tip.textContent = '再次单击：清除标注';
+    } else {
+      reset();
+    }
+  }
+  document.getElementById('stage').addEventListener('click', advance);
+  window.addEventListener('keydown', function(e){
+    if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight'){ advance(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'Escape'){ reset(); }
+  });
+  /* 供课件窗口调用 */
+  window.p17Next = advance; window.p17Reset = reset;
+  /* 自检/截图用：?all=1 直接显示全部标注 */
+  if (location.search.indexOf('all=1') >= 0){ step = 1; toggle(['g1','g2','g3','law'], true, 0); }
+</script>
+</body>
+</html>
