@@ -94,7 +94,7 @@
   #pptWin .pptbody img{max-width:100%;max-height:100%;border-radius:8px;}
   #pptWin .ppthint{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:12px;color:#8ea0c4;
     padding:3px;background:linear-gradient(0deg,rgba(0,0,0,.5),transparent);pointer-events:none;}
-  .slide-badge{position:fixed;top:70px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
+  .slide-badge{position:fixed;top:112px;right:22px;z-index:41;display:none;padding:6px 14px;border-radius:999px;
     background:rgba(255,176,32,.16);border:1px solid var(--wk);color:var(--wk);font-size:13px;letter-spacing:1px;}
   .slide-badge.show{display:block;}
   #warmTip{position:fixed;top:74px;right:22px;z-index:42;display:none;padding:5px 14px;border-radius:999px;
@@ -214,7 +214,7 @@
     <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
        开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
        讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。<br/>
-       课件窗口里 <b>点一下画面＝出现下一句</b>（复刻 PPT 的单击动画），出现完按<b>「下一个节点」</b>继续 —— 全程只靠点击也能上完一整节课。</p>
+       每段先播<b>动画</b>，播完自动展开<b>这一段对应的课件页</b>；在课件里 <b>点一下画面＝出现下一句</b>（复刻 PPT 的单击动画），出现完按<b>「下一个节点」</b>继续 —— 全程只靠点击也能上完一整节课。</p>
     <button class="btn" id="startBtn">进入课堂</button>
     <div class="warmline" id="warmLine"><span class="sp"></span><span id="warmTxt">正在课前缓存…</span></div>
     <p class="nospeech" id="nospeech" style="display:none;">
@@ -237,16 +237,31 @@ const SEG_NAME={1:'环节一 · AI情境导入',2:'环节二 · 相交与不相�
                 4:'环节四 · 垂直',5:'环节五 · 分层练习',6:'环节六 · 总结作业'};
 let playing=false, started=false, recog=null, curIdx=-1, curId=null, lastFireId='', lastFireAt=0;
 let slideList=[], slideIdx=0, slideName='课件', curImg='';
-function showSlides(list, name){
+/* 课件不再和动画一起弹出：动画先播完，再展开这一段的课件页（click-reveal 从第 0 帧开始）。
+   只有老师主动点「课件」角标时才提前打开。 */
+function prepareSlides(list, name){
   list=(list||[]).filter(Boolean);
-  if(!list.length){ hideSlide(); return; }
-  slideList=list; slideIdx=0;
+  slideList=list; slideIdx=0; curStep=0; curImg='';
+  if(!list.length) return false;
   if(name) slideName=name;
   document.getElementById('pptName').textContent=slideName;
-  document.getElementById('pptWin').classList.add('show');
+  warmFrames(revealFrames(list[0]));            // 动画在播时把这一页的帧先拉进缓存
+  return true;
+}
+function openSlideWin(){
+  if(!slideList.length) return;
+  const w=document.getElementById('pptWin');
+  renderSlide();                                // 幂等：curStep 会被夹在范围内，重复调不跳页
+  w.classList.add('show');
   document.getElementById('slideBadge').classList.add('show');
-  renderSlide();
   keepPlaying();
+}
+function hideSlideWin(){                        // 只收起窗口，保留这一段的课件页
+  document.getElementById('pptWin').classList.remove('show');
+}
+function showSlides(list, name){
+  if(!prepareSlides(list, name)){ hideSlide(); return; }
+  openSlideWin();
 }
 /* 弹课件时不让动画/配音停：只要在播流程中就续播 */
 function keepPlaying(){
@@ -527,7 +542,8 @@ document.getElementById('pptPop').onclick=e=>{
 };
 document.getElementById('slideBadge').onclick=()=>{
   const w=document.getElementById('pptWin');
-  if(slideList.length){ w.classList.toggle('show'); }
+  if(!slideList.length) return;
+  if(w.classList.contains('show')) w.classList.remove('show'); else openSlideWin();
 };
 document.addEventListener('click',e=>{ if(holding && e.target && e.target.id==='goIdleBtn'){ holding=false; } },true);
 window.addEventListener('keydown',e=>{
@@ -575,8 +591,7 @@ function holdEntry(){
   playing=false; holding=true;
   try{ player.pause(); }catch(e){}
   if(slideList.length){
-    document.getElementById('pptWin').classList.add('show');
-    document.getElementById('slideBadge').classList.add('show');
+    openSlideWin();                            // 动画播完 → 展开这一段的课件页（第 0 帧，等老师点）
   }
   if(curQuiz && answersCfg().length){
     answerArmed=true; showAnswerBar(true); selectAnswer(answerSel);
@@ -596,7 +611,12 @@ function playEntry(item){
   curIdx=idxOf(item.id); updateSegHud(); preloadAround(curIdx);
   hideHoldBar();
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
-  if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
+  if(_sl){
+    prepareSlides(_sl, (item.title||item.id||'课件'));
+    hideSlideWin();                            // 动画先播；对应课件页等动画播完再展开
+    const bd=document.getElementById('slideBadge');
+    bd.classList.add('show'); bd.title='动画播完自动展开课件 · 点一下可提前打开';
+  } else { hideSlide(); }
   playSrc(item.video,{loop:false,muted:false,onend: _sl ? holdEntry : goIdle});
   if(item.subtitle){
     bubble.style.display='block'; bubble.dataset.ch=item.ch||'both';
