@@ -115,6 +115,39 @@
   .warmline .sp{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,216,138,.3);border-top-color:#ffd88a;animation:spin .9s linear infinite;}
   .warmline.done{color:#8ef0b4;} .warmline.done .sp{display:none;}
   @keyframes spin{to{transform:rotate(360deg)}}
+  /* ===== 课件窗口里的互动页（可点击的 HTML 课件）===== */
+  #pptWin .pptbody iframe{width:100%;height:100%;border:0;background:#0b1220;border-radius:8px;}
+  /* ===== 答题双分支：正确 / 错误 ===== */
+  #answerBar{position:fixed;left:50%;bottom:clamp(104px,14vh,164px);transform:translateX(-50%);z-index:43;display:none;
+    gap:8px;align-items:center;padding:8px 12px;border-radius:14px;background:rgba(10,16,30,.84);
+    border:1px solid rgba(255,176,32,.4);backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;max-width:95vw;}
+  #answerBar.show{display:flex;}
+  #answerBar .qg{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:11px;background:rgba(255,255,255,.05);
+    border:1px solid transparent;}
+  #answerBar .qg.sel{background:rgba(255,176,32,.18);border-color:rgba(255,176,32,.65);}
+  #answerBar .ql{font-size:12.5px;color:#ffd88a;font-weight:700;letter-spacing:1px;white-space:nowrap;}
+  #answerBar button{cursor:pointer;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;border:1px solid transparent;}
+  #answerBar button.ok{background:rgba(55,224,138,.16);color:#7bf0b0;border-color:rgba(55,224,138,.5);}
+  #answerBar button.no{background:rgba(255,120,100,.16);color:#ffb0a0;border-color:rgba(255,120,100,.5);}
+  #answerBar button.fb{background:rgba(95,184,255,.16);color:#b8dcff;border-color:rgba(95,184,255,.5);}
+  #answerBar button:hover{filter:brightness(1.25);}
+  #answerBar .hint{font-size:11.5px;color:#9fb0cc;max-width:220px;line-height:1.4;}
+  /* ===== 3D 立方体工具窗（整合 cube-3d）===== */
+  #cubeWin{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:41;display:none;
+    flex-direction:column;width:min(900px,88vw);height:min(640px,78vh);min-width:420px;min-height:300px;
+    resize:both;overflow:hidden;border-radius:14px;border:1px solid rgba(120,200,255,.4);
+    background:#08111f;box-shadow:0 26px 80px rgba(0,0,0,.75);}
+  #cubeWin.show{display:flex;}
+  #cubeWin .cbar{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:move;user-select:none;
+    background:linear-gradient(180deg,rgba(120,200,255,.22),rgba(120,200,255,.04));border-bottom:1px solid rgba(255,255,255,.12);}
+  #cubeWin .cbar b{font-size:14px;letter-spacing:1px;color:#bfe6ff;white-space:nowrap;}
+  #cubeWin .cbar .hint2{font-size:11.5px;color:#9fb0cc;white-space:nowrap;}
+  #cubeWin .cbar .grow{flex:1;}
+  #cubeWin .cbar button{cursor:pointer;background:rgba(255,255,255,.08);color:#dbe6f7;border:1px solid rgba(255,255,255,.18);
+    border-radius:8px;padding:3px 10px;font-size:13px;}
+  #cubeWin .cbar button:hover{background:rgba(255,255,255,.2);}
+  #cubeWin iframe{flex:1;width:100%;border:0;background:#08111f;}
+
 </style>
 </head>
 <body>
@@ -147,9 +180,24 @@
     <div class="ppthint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放</div>
   </div>
   <div id="holdTip">课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续</div>
+  <!-- ===== 答题双分支工具条（停在题目课件时出现）===== -->
+  <div id="answerBar"></div>
+  <!-- ===== 3D 立方体工具窗（cube-3d）===== -->
+  <div id="cubeWin">
+    <div class="cbar" id="cubeBar">
+      <b>🧊 3D 立方体 · 平行与垂直</b>
+      <span class="hint2">拖标题栏移动 · 右下角拉伸 · 与动画同时显示</span>
+      <span class="grow"></span>
+      <button id="cubeBig" title="全屏/还原">全屏</button>
+      <button id="cubePop" title="在新窗口打开（可拖到副屏）">新窗口</button>
+      <button id="cubeClose" title="收起">✕</button>
+    </div>
+    <iframe id="cubeFrame" title="3D 立方体工具" src="about:blank"></iframe>
+  </div>
+
   <button class="panel-toggle" id="panelToggle" title="教师控制台">☰</button>
   <div class="panel" id="panel">
-    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="warmBtn" title="把全部视频与课件图预热到缓存">全部预加载</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
+    <div class="bar"><b>教师控制台</b><span style="flex:1"></span><span class="idlebtn" id="openPptBtn" title="打开整套 PPT 演示窗口">PPT 演示</span><span class="idlebtn" id="cubeBtn" title="打开 3D 立方体画线工具（可边讲边演示）">🧊 3D立方体</span><span class="idlebtn" id="warmBtn" title="把全部视频与课件图预热到缓存">全部预加载</span><span class="idlebtn" id="goIdleBtn">返回待机</span></div>
     <div class="scroll" id="scroll"></div>
   </div>
   <div class="start" id="start">
@@ -165,6 +213,7 @@
   </div>
 <script src="asr/vosk.js"></script>
 <script src="dialogues.js"></script>
+<script src="dialogues_add.js"></script>
 <script>
 const CFG=window.DIALOGUES;
 const player=document.getElementById('player');
@@ -211,7 +260,7 @@ function updateSegHud(){
 }
 document.addEventListener('click',e=>{
   if(!started) return;
-  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge')) return;
+  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge,#cubeWin,#answerBar')) return;
   if(document.getElementById('pptWin').classList.contains('show')) return;   // 课件窗口开着时点画面=课件翻页
   nextEntry(1);
 }, true);
@@ -304,6 +353,7 @@ function warmAllClips(){
   items.slice(0,3).forEach(it=>{ if(it.video) head.push(it.video); });
   const pri=[...new Set(head)].filter(Boolean);
   const rest=[...new Set(items.map(it=>it.video).filter(Boolean))].filter(s=>pri.indexOf(s)<0);
+  (CFG.answers||[]).forEach(q=>{ ['right','wrong','fb'].forEach(k=>{ (q[k]||[]).forEach(c=>{ if(c.video && rest.indexOf(c.video)<0) rest.push(c.video); }); }); });
   const imgs=[];
   items.forEach(it=>{ const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]); sl.forEach(s=>imgs.push(s)); });
   const gate=pri.length+imgs.length;
@@ -319,9 +369,23 @@ function warmAllClips(){
     pool(rest, 2, d=>setWarmTip('后台补缓存 '+d+' / '+rest.length));
   });
 }
+function slideIsHtml(p){ return /\.html?($|\?|#)/i.test(p||''); }
+function htmlSlideNext(){
+  try{ var f=document.getElementById('slideFrame');
+    if(f && f.contentWindow && typeof f.contentWindow.p17Next==='function') f.contentWindow.p17Next(); }catch(_){}
+}
 function renderSlide(){
   curImg=slideList[slideIdx]||'';
-  document.getElementById('pptImg').setAttribute('src',curImg);
+  const body=document.getElementById('pptBody');
+  if(slideIsHtml(curImg)){
+    const im=document.getElementById('pptImg'); if(im) im.style.display='none';
+    let f=document.getElementById('slideFrame');
+    if(!f){ f=document.createElement('iframe'); f.id='slideFrame'; f.setAttribute('src',curImg); body.appendChild(f); }
+    else if(f.getAttribute('src')!==curImg){ f.setAttribute('src',curImg); }
+  } else {
+    const f=document.getElementById('slideFrame'); if(f) f.remove();
+    const im=document.getElementById('pptImg'); im.style.display=''; im.setAttribute('src',curImg);
+  }
   document.getElementById('pptPage').textContent =
     slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
   document.getElementById('pptPrev').disabled = (slideIdx<=0);
@@ -357,7 +421,7 @@ function hideSlide(){
   });
   window.addEventListener('mouseup',()=>drag=false);
 })();
-document.getElementById('pptBody').onclick=()=>slideGo(1);
+document.getElementById('pptBody').onclick=()=>{ if(slideIsHtml(curImg)){ htmlSlideNext(); return; } slideGo(1); };
 document.getElementById('pptPrev').onclick=e=>{e.stopPropagation();slideGo(-1);};
 document.getElementById('pptNext').onclick=e=>{e.stopPropagation();slideGo(1);};
 document.getElementById('pptClose').onclick=e=>{e.stopPropagation();hideSlide();};
@@ -380,7 +444,7 @@ document.addEventListener('click',e=>{ if(holding && e.target && e.target.id==='
 window.addEventListener('keydown',e=>{
   const w=document.getElementById('pptWin');
   if(!w.classList.contains('show')) return;
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ slideGo(1); e.preventDefault(); }
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ if(slideIsHtml(curImg)){ htmlSlideNext(); } else { slideGo(1); } e.preventDefault(); }
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){ slideGo(-1); e.preventDefault(); }
   else if(e.key==='Escape'){ hideSlide(); }
   else if(e.key==='f'||e.key==='F'){ document.getElementById('pptFull').click(); }
@@ -406,7 +470,8 @@ function playSrc(src,{loop=false,muted=false,onend}={}){
   player.onended=()=>{ if(!player.loop){ resumeListen(900); onend&&onend(); } };
 }
 function goIdle(){
-  playing=false; hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
+  playing=false; holding=false; answerArmed=false; curQuiz=false; showAnswerBar(false);
+  hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
   if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
 }
 /* 有课件的段落：播完停在最后一帧，课件继续留在屏上，等老师下指令才回待机 */
@@ -418,11 +483,21 @@ function holdEntry(){
     document.getElementById('pptWin').classList.add('show');
     document.getElementById('slideBadge').classList.add('show');
   }
-  const h=document.getElementById('holdTip'); if(h) h.style.display='block';
+  const h=document.getElementById('holdTip');
+  if(curQuiz && answersCfg().length){
+    answerArmed=true; showAnswerBar(true); selectAnswer(answerSel);
+    if(h) h.textContent='学生回答后：点「正确 / 错误」（或说「正确 / 错误」）· 讲完点控制台下一个节点';
+  } else {
+    answerArmed=false; showAnswerBar(false);
+    if(h) h.textContent='课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续';
+  }
+  if(h) h.style.display='block';
 }
 function playEntry(item){
   if(!item||!item.video) return;
   playing=true; holding=false; curId=item.id||null;
+  curQuiz=!!item.quiz; answerArmed=false; showAnswerBar(false);
+  if(item.tool==='cube') openCube();
   curIdx=idxOf(item.id); updateSegHud(); preloadAround(curIdx);
   const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
@@ -437,6 +512,118 @@ function playEntry(item){
     speakerTag.textContent=CH_NAME[item.ch]||'';
   }
 }
+/* =====================================================================
+ * 答题双分支：学生回答 → 老师判「正确 / 错误」→ 智能体两种回复
+ *   CFG.answers = [{id,label,say,right:[clip…],wrong:[clip…],fb:[clip…]}]
+ *   触发：①答题条按钮  ②语音「正确 / 错误」「第一题正确」「第三题正确反馈」
+ * ===================================================================== */
+let curAnswer=null, answerSel=0, answerArmed=false, curQuiz=false;
+function answersCfg(){ return (CFG && CFG.answers) || []; }
+function showAnswerBar(show){ const el=document.getElementById('answerBar'); if(el) el.classList.toggle('show', !!show); }
+function buildAnswerBar(){
+  const el=document.getElementById('answerBar'); if(!el) return;
+  const qs=answersCfg(); if(!qs.length) return;
+  el.innerHTML='';
+  const tip=document.createElement('span'); tip.className='hint';
+  tip.textContent='学生答完 → 点「正确 / 错误」或直接说「正确 / 错误」；说「第三题正确」可指定题号';
+  el.appendChild(tip);
+  qs.forEach((q,qi)=>{
+    const g=document.createElement('span'); g.className='qg'+(qi===answerSel?' sel':''); g.dataset.qi=qi;
+    const l=document.createElement('span'); l.className='ql'; l.textContent=q.label; g.appendChild(l);
+    const b1=document.createElement('button'); b1.className='ok'; b1.textContent='✓ 正确';
+    b1.title=(q.right||[]).map(c=>c.subtitle).join(' / ');
+    b1.onclick=e=>{e.stopPropagation(); fireAnswer(qi,'right');}; g.appendChild(b1);
+    const b2=document.createElement('button'); b2.className='no'; b2.textContent='✗ 错误';
+    b2.title=(q.wrong||[]).map(c=>c.subtitle).join(' / ');
+    b2.onclick=e=>{e.stopPropagation(); fireAnswer(qi,'wrong');}; g.appendChild(b2);
+    if(q.fb && q.fb.length){
+      const b3=document.createElement('button'); b3.className='fb'; b3.textContent='正确反馈';
+      b3.title=q.fb.map(c=>c.subtitle).join(' / ');
+      b3.onclick=e=>{e.stopPropagation(); fireAnswer(qi,'fb');}; g.appendChild(b3);
+    }
+    el.appendChild(g);
+  });
+}
+function selectAnswer(qi){
+  answerSel=qi;
+  const el=document.getElementById('answerBar'); if(!el) return;
+  Array.prototype.forEach.call(el.querySelectorAll('.qg'), g=>g.classList.toggle('sel', +g.dataset.qi===qi));
+}
+function setBubble(ch, sub){
+  if(sub){ bubble.style.display='block'; bubble.dataset.ch=ch||'both';
+    whoEl.textContent=(CH_NAME[ch]||'')+'：'; replyEl.textContent=sub; }
+  else { bubble.style.display='none'; }
+  if(ch){ speakerTag.style.display='block'; speakerTag.dataset.ch=ch; speakerTag.textContent=CH_NAME[ch]||''; }
+}
+function playSeq(list, onDone){
+  let i=0;
+  const step=()=>{
+    if(i>=list.length){ onDone&&onDone(); return; }
+    const c=list[i++];
+    playing=true; holding=false;
+    setBubble(c.ch, c.subtitle);
+    playSrc(c.video,{loop:false,muted:false,onend:step});
+  };
+  step();
+}
+function fireAnswer(qi, kind){
+  const q=answersCfg()[qi]; if(!q) return;
+  const list=(kind==='right'?q.right:(kind==='wrong'?q.wrong:q.fb))||[];
+  if(!list.length) return;
+  selectAnswer(qi);
+  const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
+  lastFireId='answer:'+qi+':'+kind; lastFireAt=Date.now();
+  const kname=(kind==='right'?'正确':(kind==='wrong'?'错误':'正确反馈'));
+  mictxt.textContent='答题：'+q.label+' · '+kname;
+  heardEl.textContent='答题回复：'+q.label+' → '+kname;
+  playSeq(list, ()=>{ holdEntry(); showAnswerBar(true); });
+}
+/* 语音：「第一题正确 / 第三题错误 / 正确反馈」；裸说「正确 / 错误」作用在当前选中题 */
+function tryAnswerCommand(text){
+  const t=norm(text);
+  if(!t || !answerArmed || !answersCfg().length) return false;
+  const NUMC={'一':0,'二':1,'三':2,'四':3,'1':0,'2':1,'3':2,'4':3};
+  let qi=-1;
+  const m=t.match(/([一二三四1234])(号|小)?(题|句)|第([一二三四1234])(小)?(题|句)/);
+  if(m){ const c=m[1]||m[4]; if(c!==undefined && NUMC[c]!==undefined) qi=NUMC[c]; }
+  const isFb=/正确反馈|反馈/.test(t);
+  const isWrong=/错误|答错|错的|不对/.test(t);
+  const isRight=/正确|答对|对喽|是对的/.test(t);
+  if(!isFb && !isRight && !isWrong) return false;
+  if(qi<0){ if(t.length>6) return false; qi=answerSel; }
+  if(qi<0 || qi>=answersCfg().length) return false;
+  fireAnswer(qi, isFb?'fb':(isWrong?'wrong':'right'));
+  return true;
+}
+/* ---------- 3D 立方体工具窗（cube-3d，与动画同时显示）---------- */
+function openCube(){
+  const w=document.getElementById('cubeWin'), f=document.getElementById('cubeFrame');
+  if(f){ const cur=f.getAttribute('src');
+    if(!cur || cur==='about:blank') f.setAttribute('src','cube3d/index.html'); }
+  if(w) w.classList.add('show');
+  keepPlaying();
+}
+function closeCube(){ const w=document.getElementById('cubeWin'); if(w) w.classList.remove('show'); }
+document.getElementById('cubeBtn').onclick=e=>{e.stopPropagation(); openCube();};
+document.getElementById('cubeClose').onclick=e=>{e.stopPropagation(); closeCube();};
+document.getElementById('cubePop').onclick=e=>{e.stopPropagation(); window.open('cube3d/index.html','cube3d','width=1280,height=820,menubar=no,toolbar=no');};
+document.getElementById('cubeBig').onclick=e=>{e.stopPropagation();
+  const w=document.getElementById('cubeWin');
+  if(document.fullscreenElement){ document.exitFullscreen(); }
+  else if(w.requestFullscreen){ w.requestFullscreen().catch(()=>{}); } };
+(function(){
+  const bar=document.getElementById('cubeBar'), win=document.getElementById('cubeWin');
+  let dx=0,dy=0,drag=false;
+  bar.addEventListener('mousedown',e=>{ if(e.target.tagName==='BUTTON') return;
+    const r=win.getBoundingClientRect(); win.style.transform='none';
+    win.style.left=r.left+'px'; win.style.top=r.top+'px';
+    dx=e.clientX-r.left; dy=e.clientY-r.top; drag=true; e.preventDefault(); });
+  window.addEventListener('mousemove',e=>{ if(!drag) return;
+    win.style.left=Math.max(0,Math.min(window.innerWidth-120,e.clientX-dx))+'px';
+    win.style.top =Math.max(0,Math.min(window.innerHeight-60,e.clientY-dy))+'px'; });
+  window.addEventListener('mouseup',()=>drag=false);
+})();
+
 /* ---------- 语音匹配：按 say 关键词命中最长最多者 ---------- */
 /* ---------- 语音匹配（多层打分） ----------
    1) 规范化：去标点/空格、全半角统一、常见同音误识别纠正
@@ -543,6 +730,7 @@ function probs(textRaw){
 }
 function handleText(text, opts){
   opts=opts||{}; if(!text) return; text=(text||'').trim();
+  if(tryAnswerCommand(text)) return;      // 答题判分优先
   const pc=x=>Math.round(x*100);
   /* —— 相对指令 —— */
   if(/(下一段|下一个|继续|接着|往下|下一)/.test(text)){ heardEl.textContent='听到：'+text+'　→　下一段 ▶'; if(typeof nextEntry==='function') nextEntry(1); return; }
@@ -749,6 +937,7 @@ function buildPanel(){
   });
 }
 buildPanel();
+buildAnswerBar();
 if(CFG&&CFG.idle){player.src=CFG.idle;}
 /* 课前缓存：页面一打开就预热全部视频与课件图，等"缓存完毕"再进课堂 */
 setWarmLine('课前缓存中… 0 / 7（先存开场要用的）', false);
