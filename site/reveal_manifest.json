@@ -1,0 +1,177 @@
+{
+ "deck/cq02.png": [
+  "deck/reveal/cq02_00.webp",
+  "deck/reveal/cq02_01.webp"
+ ],
+ "deck/cq03.png": [
+  "deck/reveal/cq03_00.webp",
+  "deck/reveal/cq03_01.webp"
+ ],
+ "deck/cq04.png": [
+  "deck/reveal/cq04_00.webp",
+  "deck/reveal/cq04_01.webp"
+ ],
+ "deck/cq05.png": [
+  "deck/reveal/cq05_00.webp",
+  "deck/reveal/cq05_01.webp",
+  "deck/reveal/cq05_02.webp",
+  "deck/reveal/cq05_03.webp"
+ ],
+ "deck/cq06.png": [
+  "deck/reveal/cq06_00.webp",
+  "deck/reveal/cq06_01.webp"
+ ],
+ "deck/cq07.png": [
+  "deck/reveal/cq07_00.webp",
+  "deck/reveal/cq07_01.webp",
+  "deck/reveal/cq07_02.webp"
+ ],
+ "deck/cq09.png": [
+  "deck/reveal/cq09_00.webp",
+  "deck/reveal/cq09_01.webp"
+ ],
+ "deck/cq10.png": [
+  "deck/reveal/cq10_00.webp",
+  "deck/reveal/cq10_01.webp",
+  "deck/reveal/cq10_02.webp",
+  "deck/reveal/cq10_03.webp",
+  "deck/reveal/cq10_04.webp",
+  "deck/reveal/cq10_05.webp",
+  "deck/reveal/cq10_06.webp",
+  "deck/reveal/cq10_07.webp",
+  "deck/reveal/cq10_08.webp",
+  "deck/reveal/cq10_09.webp",
+  "deck/reveal/cq10_10.webp",
+  "deck/reveal/cq10_11.webp",
+  "deck/reveal/cq10_12.webp",
+  "deck/reveal/cq10_13.webp",
+  "deck/reveal/cq10_14.webp",
+  "deck/reveal/cq10_15.webp",
+  "deck/reveal/cq10_16.webp",
+  "deck/reveal/cq10_17.webp",
+  "deck/reveal/cq10_18.webp",
+  "deck/reveal/cq10_19.webp",
+  "deck/reveal/cq10_20.webp",
+  "deck/reveal/cq10_21.webp",
+  "deck/reveal/cq10_22.webp",
+  "deck/reveal/cq10_23.webp"
+ ],
+ "deck/cq11.png": [
+  "deck/reveal/cq11_00.webp",
+  "deck/reveal/cq11_01.webp",
+  "deck/reveal/cq11_02.webp",
+  "deck/reveal/cq11_03.webp",
+  "deck/reveal/cq11_04.webp"
+ ],
+ "deck/cq12.png": [
+  "deck/reveal/cq12_00.webp",
+  "deck/reveal/cq12_01.webp",
+  "deck/reveal/cq12_02.webp",
+  "deck/reveal/cq12_03.webp",
+  "deck/reveal/cq12_05.webp",
+  "deck/reveal/cq12_06.webp",
+  "deck/reveal/cq12_07.webp",
+  "deck/reveal/cq12_08.webp",
+  "deck/reveal/cq12_09.webp",
+  "deck/reveal/cq12_10.webp"
+ ],
+ "deck/cq13.png": [
+  "deck/reveal/cq13_00.webp",
+  "deck/reveal/cq13_01.webp",
+  "deck/reveal/cq13_02.webp"
+ ],
+ "deck/cq14.png": [
+  "deck/reveal/cq14_00.webp",
+  "deck/reveal/cq14_01.webp"
+ ],
+ "deck/cq15.png": [
+  "deck/reveal/cq15_00.webp",
+  "deck/reveal/cq15_01.webp",
+  "deck/reveal/cq15_02.webp"
+ ],
+ "deck/cq16.png": [
+  "deck/reveal/cq16_00.webp",
+  "deck/reveal/cq16_01.webp",
+  "deck/reveal/cq16_02.webp",
+  "deck/reveal/cq16_03.webp",
+  "deck/reveal/cq16_04.webp",
+  "deck/reveal/cq16_05.webp",
+  "deck/reveal/cq16_06.webp",
+  "deck/reveal/cq16_07.webp",
+  "deck/reveal/cq16_08.webp",
+  "deck/reveal/cq16_09.webp",
+  "deck/reveal/cq16_10.webp",
+  "deck/reveal/cq16_11.webp"
+ ],
+ "deck/cq17.png": [
+  "deck/reveal/cq17_00.webp",
+  "deck/reveal/cq17_01.webp",
+  "deck/reveal/cq17_02.webp",
+  "deck/reveal/cq17_03.webp"
+ ],
+ "deck/cq18.png": [
+  "deck/reveal/cq18_00.webp",
+  "deck/reveal/cq18_01.webp"
+ ],
+ "deck/cq19.png": [
+  "deck/reveal/cq19_00.webp",
+  "deck/reveal/cq19_01.webp",
+  "deck/reveal/cq19_02.webp",
+  "deck/reveal/cq19_03.webp",
+  "deck/reveal/cq19_04.webp",
+  "deck/reveal/cq19_05.webp",
+  "deck/reveal/cq19_06.webp",
+  "deck/reveal/cq19_07.webp",
+  "deck/reveal/cq19_08.webp",
+  "deck/reveal/cq19_09.webp",
+  "deck/reveal/cq19_10.webp",
+  "deck/reveal/cq19_11.webp",
+  "deck/reveal/cq19_12.webp",
+  "deck/reveal/cq19_13.webp"
+ ],
+ "deck/cq20.png": [
+  "deck/reveal/cq20_00.webp",
+  "deck/reveal/cq20_01.webp"
+ ],
+ "deck/cq21.png": [
+  "deck/reveal/cq21_00.webp",
+  "deck/reveal/cq21_01.webp",
+  "deck/reveal/cq21_02.webp"
+ ],
+ "deck/cq22.png": [
+  "deck/reveal/cq22_00.webp",
+  "deck/reveal/cq22_01.webp",
+  "deck/reveal/cq22_02.webp",
+  "deck/reveal/cq22_03.webp"
+ ],
+ "deck/cq24.png": [
+  "deck/reveal/cq24_00.webp",
+  "deck/reveal/cq24_01.webp",
+  "deck/reveal/cq24_02.webp",
+  "deck/reveal/cq24_03.webp",
+  "deck/reveal/cq24_04.webp",
+  "deck/reveal/cq24_05.webp",
+  "deck/reveal/cq24_06.webp",
+  "deck/reveal/cq24_07.webp",
+  "deck/reveal/cq24_08.webp",
+  "deck/reveal/cq24_09.webp",
+  "deck/reveal/cq24_10.webp",
+  "deck/reveal/cq24_11.webp"
+ ],
+ "deck/cq27.png": [
+  "deck/reveal/cq27_00.webp",
+  "deck/reveal/cq27_01.webp",
+  "deck/reveal/cq27_02.webp",
+  "deck/reveal/cq27_03.webp",
+  "deck/reveal/cq27_04.webp",
+  "deck/reveal/cq27_05.webp",
+  "deck/reveal/cq27_06.webp",
+  "deck/reveal/cq27_09.webp",
+  "deck/reveal/cq27_10.webp",
+  "deck/reveal/cq27_13.webp",
+  "deck/reveal/cq27_14.webp",
+  "deck/reveal/cq27_17.webp",
+  "deck/reveal/cq27_18.webp",
+  "deck/reveal/cq27_19.webp"
+ ]
+}
