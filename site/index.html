@@ -108,9 +108,14 @@
     border-radius:10px;padding:7px 14px;font-size:14px;}
   #navBtns button:hover{background:rgba(255,255,255,.2);}
   #navBtns #segIdx{color:#9fb0cc;font-size:13px;min-width:62px;text-align:center;}
-  #holdTip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
-    padding:6px 18px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
+  #holdBar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:39;display:none;
+    gap:8px;align-items:center;}
+  #holdBar.show{display:flex;}
+  #holdTip{padding:6px 16px;border-radius:999px;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.5);
     color:#ffd88a;font-size:13px;letter-spacing:1px;white-space:nowrap;}
+  #holdNext{cursor:pointer;border:none;border-radius:999px;padding:7px 18px;font-size:13.5px;font-weight:800;letter-spacing:1px;
+    color:#1a1206;background:linear-gradient(90deg,var(--wk),#ffd76b);box-shadow:0 6px 18px rgba(255,180,40,.35);}
+  #holdNext:active{transform:scale(.97);}
   .warmline{margin-top:16px;font-size:15px;color:#ffd88a;display:flex;align-items:center;justify-content:center;gap:9px;letter-spacing:.5px;}
   .warmline .sp{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,216,138,.3);border-top-color:#ffd88a;animation:spin .9s linear infinite;}
   .warmline.done{color:#8ef0b4;} .warmline.done .sp{display:none;}
@@ -170,16 +175,20 @@
   <div id="pptWin">
     <div class="pptbar" id="pptBar">
       <b id="pptName">课件</b><span class="pg" id="pptPage"></span><span class="grow"></span>
-      <button id="pptPrev" title="上一页（←）">◀</button>
-      <button id="pptNext" title="下一页（→ 或空格）">▶</button>
+      <button id="pptPrev" title="上一句 / 上一页（←）">◀</button>
+      <button id="pptNext" title="点一下出现下一句；本页出完再点进下一页（→ 或空格）">▶</button>
+      <button id="pptSkip" title="跳过本页剩余单击，直接到下一页" style="display:none">⏭</button>
       <button id="pptFull" title="全屏 / 还原（F）">全屏</button>
       <button id="pptPop" title="在新窗口打开完整 PPT（可拖到副屏）">新窗口</button>
       <button id="pptClose" title="收起（Esc）">✕</button>
     </div>
     <div class="pptbody" id="pptBody"><img id="pptImg" alt="课件"></div>
-    <div class="ppthint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放</div>
+    <div class="ppthint" id="pptHint">点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放</div>
   </div>
-  <div id="holdTip">课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续</div>
+  <div id="holdBar">
+    <span id="holdTip">课件段落已停在讲解状态 · 讲完点「下一个节点」继续</span>
+    <button id="holdNext" title="进入下一个教学节点（点画面空白处也可以）">下一个节点 ▶</button>
+  </div>
   <!-- ===== 答题双分支工具条（停在题目课件时出现）===== -->
   <div id="answerBar"></div>
   <!-- ===== 3D 立方体工具窗（cube-3d）===== -->
@@ -204,7 +213,8 @@
     <h2>《平行与垂直》双智能体课堂</h2>
     <p>孙悟空负责<b>演示与追问</b>，猪八戒负责<b>出题与点评</b>。<br/>
        开启后可直接用语音口令，也可点右下角 <b>☰</b> 按教学环节手动触发。<br/>
-      讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。</p>
+       讲课时：<b>点一下画面</b> 或按 <b>空格 / →</b> 切到下一段，<b>←</b> 回上一段，左下角显示进度。<br/>
+       课件窗口里 <b>点一下画面＝出现下一句</b>（复刻 PPT 的单击动画），出现完按<b>「下一个节点」</b>继续 —— 全程只靠点击也能上完一整节课。</p>
     <button class="btn" id="startBtn">进入课堂</button>
     <div class="warmline" id="warmLine"><span class="sp"></span><span id="warmTxt">正在课前缓存…</span></div>
     <p class="nospeech" id="nospeech" style="display:none;">
@@ -214,6 +224,7 @@
 <script src="asr/vosk.js"></script>
 <script src="dialogues.js"></script>
 <script src="dialogues_add.js"></script>
+<script src="reveals.js"></script>
 <script>
 const CFG=window.DIALOGUES;
 const player=document.getElementById('player');
@@ -260,8 +271,11 @@ function updateSegHud(){
 }
 document.addEventListener('click',e=>{
   if(!started) return;
-  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge,#cubeWin,#answerBar')) return;
-  if(document.getElementById('pptWin').classList.contains('show')) return;   // 课件窗口开着时点画面=课件翻页
+  if(e.target.closest('#pptWin,#panel,.panel-toggle,#navBtns,#start,#slideBadge,#cubeWin,#answerBar,#holdBar')) return;
+  if(document.getElementById('pptWin').classList.contains('show')) {
+    if(holding) nextEntry(1);          // 讲解状态：点课件窗口外的画面 = 进入下一个节点（全点击上课）
+    return;                            // 课件窗口开着时点画面=课件翻页
+  }
   nextEntry(1);
 }, true);
 window.addEventListener('keydown',e=>{
@@ -295,10 +309,10 @@ function preloadAround(i){
   const its=CFG.items||[];
   for(let k=1;k<=AHEAD;k++){ const it=its[i+k]; if(it) warm(it.video); }
   if(its[i-1]) warm(its[i-1].video);
-  for(let k=1;k<=2;k++){                       // 顺手预载下一两段的课件图
+  for(let k=1;k<=2;k++){                       // 顺手预载下一两段的课件图（含单击帧）
     const it=its[i+k]; if(!it) continue;
     const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
-    sl.forEach(s=>{ const im=new Image(); im.src=s; });
+    sl.forEach(s=>{ const im=new Image(); im.src=s; warmFrames(revealFrames(s)); });
   }
 }
 function warmAll(){
@@ -367,6 +381,26 @@ function warmAllClips(){
     setWarmLine('已就绪：可以上课了 ✓ 后台继续缓存其余 '+rest.length+' 段（不影响上课）', true);
     warming=false;
     pool(rest, 2, d=>setWarmTip('后台补缓存 '+d+' / '+rest.length));
+    warmAllReveals();
+  });
+}
+/* 后台把课件「单击出现的帧图」也缓存好，避免教室里点一下要等 */
+function warmAllReveals(){
+  const pages=new Set();
+  (CFG.items||[]).forEach(it=>{
+    const sl=(it.slides&&it.slides.length)?it.slides:(it.slide?[it.slide]:[]);
+    sl.forEach(s=>pages.add(s));
+  });
+  const list=[];
+  pages.forEach(p=>{ (revealFrames(p)||[]).forEach(f=>{ if(list.indexOf(f)<0) list.push(f); }); });
+  if(!list.length) return;
+  let i=0, done=0;
+  const worker=async()=>{
+    while(i<list.length){ const s=list[i++]; await dlImg(s); done++;
+      if(done%12===0) setWarmTip('后台补缓存课件单击帧 '+done+' / '+list.length); }
+  };
+  Promise.all(Array.from({length:3}, worker)).then(()=>{
+    setWarmTip('课件单击帧已缓存：'+list.length+' 帧（点一下即时出现）', 6000);
   });
 }
 function slideIsHtml(p){ return /\.html?($|\?|#)/i.test(p||''); }
@@ -374,32 +408,86 @@ function htmlSlideNext(){
   try{ var f=document.getElementById('slideFrame');
     if(f && f.contentWindow && typeof f.contentWindow.p17Next==='function') f.contentWindow.p17Next(); }catch(_){}
 }
+/* ---------- 单击逐步出现（复刻 PPT 的单击动画）----------
+   window.REVEALS[页面] = [帧0, 帧1, ...]：帧0 = 一句都还没出现，
+   每点一下换成下一帧；本页点到底再点才翻页（和放映 PPT 一样）。
+   帧图由 work/reveal_export.py 从教师课件的 <p:timing> 逐单击导出。 */
+let curStep=0;
+function revealFrames(p){ var R=window.REVEALS||{}; return R[p]||null; }
+function warmFrames(frames){ (frames||[]).forEach(function(s){ var im=new Image(); im.src=s; }); }
+/* 万一浏览器解不了 WebP：退回整页静图，课堂照常上（不报错、不空白） */
+(function(){
+  const im=document.getElementById('pptImg');
+  if(im) im.addEventListener('error',function(){
+    const fr=revealFrames(curImg);
+    if(fr && curImg && im.getAttribute('src') && im.getAttribute('src').indexOf('reveal/')>=0){
+      im.setAttribute('src',curImg);
+    }
+  });
+})();
 function renderSlide(){
   curImg=slideList[slideIdx]||'';
   const body=document.getElementById('pptBody');
+  const frames=revealFrames(curImg);
   if(slideIsHtml(curImg)){
+    curStep=0;
     const im=document.getElementById('pptImg'); if(im) im.style.display='none';
     let f=document.getElementById('slideFrame');
     if(!f){ f=document.createElement('iframe'); f.id='slideFrame'; f.setAttribute('src',curImg); body.appendChild(f); }
     else if(f.getAttribute('src')!==curImg){ f.setAttribute('src',curImg); }
   } else {
     const f=document.getElementById('slideFrame'); if(f) f.remove();
-    const im=document.getElementById('pptImg'); im.style.display=''; im.setAttribute('src',curImg);
+    const im=document.getElementById('pptImg'); im.style.display='';
+    if(frames){
+      curStep=Math.max(0,Math.min(curStep,frames.length-1));
+      im.setAttribute('src',frames[curStep]);
+      warmFrames(frames);
+    } else {
+      curStep=0; im.setAttribute('src',curImg);
+    }
   }
-  document.getElementById('pptPage').textContent =
-    slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
-  document.getElementById('pptPrev').disabled = (slideIdx<=0);
-  document.getElementById('pptNext').disabled = (slideIdx>=slideList.length-1);
+  updateSlideHud(frames);
   keepPlaying();
+}
+function updateSlideHud(frames){
+  if(frames===undefined) frames=revealFrames(curImg);
+  let s = slideList.length>1 ? ((slideIdx+1)+' / '+slideList.length) : '';
+  if(frames){
+    const total=Math.max(1,frames.length-1), left=frames.length-1-curStep;
+    s += (s?'　·　':'') + '单击出现 '+curStep+'/'+total + (left>0?('　还剩 '+left+' 步'):'　已全部出现');
+  }
+  document.getElementById('pptPage').textContent=s;
+  const prevBtn=document.getElementById('pptPrev'), nextBtn=document.getElementById('pptNext');
+  prevBtn.disabled = (slideIdx<=0 && !(frames&&curStep>0));
+  nextBtn.disabled = (slideIdx>=slideList.length-1 && !(frames&&curStep<frames.length-1));
+  const sk=document.getElementById('pptSkip');
+  if(sk) sk.style.display = (frames && frames.length>2) ? '' : 'none';
+  const h=document.getElementById('pptHint');
+  if(h) h.textContent = frames
+    ? (curStep<frames.length-1
+        ? '点一下画面＝出现下一句（PPT 单击动画）· 点到底再点进下一页 · 拖标题栏移动'
+        : '本页已全部出现 · 再点一下进下一页')
+    : '点画面下一页 · 拖标题栏移动 · 右下角拉伸 · 动画在后台继续播放';
 }
 function slideGo(d){
   if(!slideList.length) return;
+  const frames=revealFrames(curImg);
+  if(frames && d>0 && curStep<frames.length-1){ curStep++; renderSlide(); return; }
+  if(frames && d<0 && curStep>0){ curStep--; renderSlide(); return; }
   const n=slideIdx+d;
   if(n<0||n>=slideList.length) return;
-  slideIdx=n; renderSlide();
+  slideIdx=n;
+  const nf=revealFrames(slideList[n]);
+  curStep = (d<0 && nf) ? nf.length-1 : 0;    // 往回翻页时停在“已全部出现”
+  renderSlide();
+}
+function skipPage(){                            // 跳过本页剩余单击，直接到下一页
+  const n=slideIdx+1;
+  if(n>=slideList.length) return;
+  slideIdx=n; curStep=0; renderSlide();
 }
 function hideSlide(){
-  slideList=[]; slideIdx=0; curImg='';
+  slideList=[]; slideIdx=0; curImg=''; curStep=0;
   document.getElementById('pptWin').classList.remove('show');
   document.getElementById('slideBadge').classList.remove('show');
 }
@@ -424,6 +512,7 @@ function hideSlide(){
 document.getElementById('pptBody').onclick=()=>{ if(slideIsHtml(curImg)){ htmlSlideNext(); return; } slideGo(1); };
 document.getElementById('pptPrev').onclick=e=>{e.stopPropagation();slideGo(-1);};
 document.getElementById('pptNext').onclick=e=>{e.stopPropagation();slideGo(1);};
+document.getElementById('pptSkip').onclick=e=>{e.stopPropagation();skipPage();};
 document.getElementById('pptClose').onclick=e=>{e.stopPropagation();hideSlide();};
 document.getElementById('pptFull').onclick=e=>{
   e.stopPropagation();
@@ -471,11 +560,17 @@ function playSrc(src,{loop=false,muted=false,onend}={}){
 }
 function goIdle(){
   playing=false; holding=false; answerArmed=false; curQuiz=false; showAnswerBar(false);
-  hideSlide(); bubble.style.display='none'; speakerTag.style.display='none';
+  hideSlide(); hideHoldBar(); bubble.style.display='none'; speakerTag.style.display='none';
   if(CFG&&CFG.idle) playSrc(CFG.idle,{loop:true,muted:true});
 }
 /* 有课件的段落：播完停在最后一帧，课件继续留在屏上，等老师下指令才回待机 */
 let holding=false;
+function showHoldBar(txt){
+  const bar=document.getElementById('holdBar'), t=document.getElementById('holdTip');
+  if(txt!=null && t) t.textContent=txt;
+  if(bar) bar.classList.add('show');
+}
+function hideHoldBar(){ const bar=document.getElementById('holdBar'); if(bar) bar.classList.remove('show'); }
 function holdEntry(){
   playing=false; holding=true;
   try{ player.pause(); }catch(e){}
@@ -483,15 +578,15 @@ function holdEntry(){
     document.getElementById('pptWin').classList.add('show');
     document.getElementById('slideBadge').classList.add('show');
   }
-  const h=document.getElementById('holdTip');
   if(curQuiz && answersCfg().length){
     answerArmed=true; showAnswerBar(true); selectAnswer(answerSel);
-    if(h) h.textContent='学生回答后：点「正确 / 错误」（或说「正确 / 错误」）· 讲完点控制台下一个节点';
+    showHoldBar('学生回答后：点「正确 / 错误」（或说「正确 / 错误」）· 讲完点「下一个节点」');
   } else {
     answerArmed=false; showAnswerBar(false);
-    if(h) h.textContent='课件段落已停在讲解状态 · 讲完点控制台下一个节点或「返回待机」继续';
+    showHoldBar(slideList.length
+      ? '点课件画面＝出现下一句 · 出现完点「下一个节点」继续'
+      : '讲完点「下一个节点」继续（点画面空白处也可以）');
   }
-  if(h) h.style.display='block';
 }
 function playEntry(item){
   if(!item||!item.video) return;
@@ -499,7 +594,7 @@ function playEntry(item){
   curQuiz=!!item.quiz; answerArmed=false; showAnswerBar(false);
   if(item.tool==='cube') openCube();
   curIdx=idxOf(item.id); updateSegHud(); preloadAround(curIdx);
-  const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
+  hideHoldBar();
   const _sl = item.slides && item.slides.length ? item.slides : (item.slide ? [item.slide] : null);
   if(_sl){ showSlides(_sl, (item.title||item.id||'课件')); } else { hideSlide(); }
   playSrc(item.video,{loop:false,muted:false,onend: _sl ? holdEntry : goIdle});
@@ -571,7 +666,7 @@ function fireAnswer(qi, kind){
   const list=(kind==='right'?q.right:(kind==='wrong'?q.wrong:q.fb))||[];
   if(!list.length) return;
   selectAnswer(qi);
-  const _h=document.getElementById('holdTip'); if(_h) _h.style.display='none';
+  hideHoldBar();
   lastFireId='answer:'+qi+':'+kind; lastFireAt=Date.now();
   const kname=(kind==='right'?'正确':(kind==='wrong'?'错误':'正确反馈'));
   mictxt.textContent='答题：'+q.label+' · '+kname;
@@ -909,6 +1004,7 @@ document.getElementById('openPptBtn').onclick=()=>{
 };
 document.getElementById('nextSeg').onclick=e=>{e.stopPropagation();nextEntry(1);};
 document.getElementById('prevSeg').onclick=e=>{e.stopPropagation();nextEntry(-1);};
+document.getElementById('holdNext').onclick=e=>{e.stopPropagation();nextEntry(1);};
 document.getElementById('panelToggle').onclick=()=>{
   document.getElementById('panel').classList.toggle('open');
 };
