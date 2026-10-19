@@ -23,7 +23,7 @@ window.NODES = [
   { id: "p23", page: 23, seg: 5, title: "第一题的答案", type: "activity", video: "videos/p23_fix.mp4", say: ["第一题答案", "点评一下"], slot: true },
   { id: "p24", page: 24, seg: 5, title: "第二题：判断对错", type: "quiz", video: "videos/p24_plate.mp4", quiz: "q24", say: ["第二题", "判断题"] },
   { id: "p25", page: 25, seg: 5, title: "第三题：折纸游戏", type: "activity", video: "", say: ["第三题", "折纸游戏"] },
-  { id: "p26", page: 26, seg: 6, title: "知识导图", type: "card", video: "videos/6-1_wk_summary.mp4", say: ["总结", "知识梳理"] },
+  { id: "p26", page: 26, seg: 6, title: "知识导图", type: "card", cardEarly: true, video: "videos/6-1_wk_summary.mp4", say: ["总结", "知识梳理"] },
   { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/5-12_wk_life_examples.mp4", say: ["生活中的例子", "举例子"] },
   { id: "p28", page: 28, seg: 6, title: "老师寄语", type: "card", video: "", say: ["老师寄语", "下课"] }
 ];
