@@ -12,11 +12,11 @@ window.CARDS = {
     foot: "点击进入"
   },
   p05: {
-    title: "直线特点", tag: "环节一", steps: 3,
+    hero: true, title: "直线的特点", tag: "环节一 · 认识直线", steps: 3,
     blocks: [
-      { n: "1", t: "可以向两端无限延伸", step: 1 },
-      { n: "2", t: "两端没有端点", step: 2 },
-      { n: "3", t: "不能度量长短", step: 3 }
+      { n: "1", t: "可以向<b>两端</b>无限延伸", step: 1, wide: true },
+      { n: "2", t: "两端都<b>没有端点</b>", step: 2, wide: true },
+      { n: "3", t: "所以直线<b>不能度量</b>长短", step: 3, wide: true }
     ],
     foot: "点击逐条揭示"
   },
@@ -137,13 +137,14 @@ window.CARDS = {
     foot: "折好后，我们来找一找生活中的平行与垂直"
   },
   p26: {
-    title: "同一平面内两条直线的位置关系", tag: "总结", steps: 0,
+    hero: true, center: true, title: "同一平面内两条直线的位置关系", tag: "总结", steps: 0,
     blocks: [
-      { n: "1", t: "不相交：互相平行", step: 0, wide: true },
-      { n: "定", t: "定义：在同一个平面内不相交的两条直线叫做平行线，也可以说这两条直线互相平行。", step: 0, wide: true },
-      { n: "2", t: "相交", step: 0 },
-      { n: "①", t: "普通相交（夹角不是直角）", step: 0 },
-      { n: "②", t: "特殊相交：垂直 —— 交点叫垂足", step: 0 }
+      { n: "", t: "<b>1 不相交：互相平行</b>", step: 0, wide: true },
+      { n: "", t: "定义：在同一个平面内不相交的两条直线叫做平行线，", step: 0, wide: true },
+      { n: "", t: "也可以说这两条直线互相平行。", step: 0, wide: true },
+      { n: "", t: "<b>2 相交</b>", step: 0, wide: true },
+      { n: "", t: "① 普通相交（夹角不是直角）", step: 0, wide: true },
+      { n: "", t: "② 特殊相交：垂直 —— 交点叫垂足", step: 0, wide: true }
     ],
     foot: "点击继续"
   },

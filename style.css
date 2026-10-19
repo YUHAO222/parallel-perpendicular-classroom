@@ -124,3 +124,8 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
   font-size:13.5px;line-height:1.5;padding:9px 14px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.45);
   opacity:0;pointer-events:none;transition:.22s;text-align:center}
 #vtoast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 居中排版卡（总结页） */
+.hero.center .line{text-align:center;font-size:23px}
+.hero.center .foot{justify-content:center}
+.hero.center{top:50%;transform:translate(-50%,-50%)}

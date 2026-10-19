@@ -108,7 +108,7 @@
         <h2>${c.title}</h2>
         ${c.blocks.map(b => `<div class="line" data-step="${b.step || 0}">${b.t}</div>`).join('')}
         <div class="foot">${c.foot || ''}<span id="stepInfo"></span></div>`;
-      cardEl.className = 'hero';
+      cardEl.className = 'hero' + (c.center ? ' center' : '');
     } else {
       cardEl.innerHTML = `
         <div class="hd"><h2>${c.title}</h2><div class="ln"></div><span class="tag">${c.tag || ''}</span></div>
