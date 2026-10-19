@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>平行与垂直 · 智能体课堂</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <div id="bg" style="background-image:url(images/bg.jpg)"></div>
+  <video id="video" playsinline preload="auto"></video>
+  <canvas id="geo"></canvas>
+
+  <div class="topbar">
+    <span class="badge"><b id="pno">01</b> / 28</span>
+    <span class="badge" id="ptitle">封面</span>
+    <span class="badge" id="pseg">环节一</span>
+    <span class="badge ghost" id="modeTag" hidden>几何层</span>
+    <a class="badge" href="home.html" style="text-decoration:none;color:#cfe0f5">目录</a>
+  </div>
+
+  <div class="micbox">
+    <span class="chip" id="micChip"><i class="dot"></i><span id="micTxt">语音待启动</span></span>
+    <span class="heard" id="heard" hidden></span>
+  </div>
+
+  <div id="card" class="cardbar" hidden></div>
+  <div id="quiz" class="quizbar" hidden></div>
+
+  <div class="hint" id="hint">点击画面 / 空格 / → 下一段</div>
+  <div class="nav">
+    <button id="btnPrev" title="上一段（←）">◀</button>
+    <button id="btnReplay" title="重播（R）">重播</button>
+    <button id="btnSpin" title="几何层旋转（S）">旋转中</button>
+    <button id="btnNext">下一段 ▶</button>
+  </div>
+
+  <div id="gate">
+    <div class="gatebox">
+      <h1>平行与垂直</h1>
+      <p>西游数学历险记 · 四年级上册 第五单元</p>
+      <button id="startBtn">进入课堂</button>
+      <small>提示：进入后动画自动播放；播完点击或按空格继续</small>
+    </div>
+  </div>
+</div>
+
+<script src="nodes.js"></script>
+<script src="cards.js"></script>
+<script src="geom.js"></script>
+<script src="style.js"></script>
+</body>
+</html>

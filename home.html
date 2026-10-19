@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>平行与垂直 · 课时目录</title>
+<style>
+  body{margin:0;background:radial-gradient(circle at 50% 0%,#0d2430,#05080e 60%);color:#e8f0fb;
+    font-family:"Microsoft YaHei",system-ui,sans-serif;min-height:100vh}
+  .wrap{max-width:1060px;margin:0 auto;padding:46px 24px 60px}
+  h1{margin:0 0 6px;font-size:34px;letter-spacing:2px;color:#fff2d0}
+  .sub{color:#9fb2cc;font-size:14px;margin-bottom:26px}
+  .go{display:inline-block;padding:12px 30px;border-radius:999px;text-decoration:none;font-weight:700;
+    background:linear-gradient(180deg,#ffe6a6,#e9b95c);color:#20180a;margin-bottom:30px}
+  .seg{margin:22px 0 10px;font-size:13px;color:#f3c96b;letter-spacing:1px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+  a.item{display:block;padding:12px 14px;border-radius:12px;text-decoration:none;color:#dce8f7;
+    background:rgba(10,22,34,.72);border:1px solid rgba(255,255,255,.09)}
+  a.item:hover{border-color:rgba(243,201,107,.5);transform:translateY(-1px)}
+  .p{font-size:11px;color:#8fa6bf}
+  .t{font-size:14.5px;margin:3px 0 4px}
+  .tag{font-size:10.5px;padding:1px 6px;border-radius:6px;background:#12283a;color:#8fd9ff}
+  .tag.geo{background:#2a1f3a;color:#e3a6ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>平行与垂直</h1>
+  <div class="sub">西游数学历险记 · 人教版四年级上册 第五单元 · 冯晴</div>
+  <a class="go" href="index.html">进入课堂 ▶</a>
+  <div id="list"></div>
+</div>
+<script src="nodes.js"></script>
+<script src="cards.js"></script>
+<script>
+const SEG = window.SEG_NAME || {};
+const list = document.getElementById('list');
+const g = {};
+NODES.forEach(n => (g[n.seg] = g[n.seg] || []).push(n));
+Object.keys(g).sort().forEach(s => {
+  const h = document.createElement('div');
+  h.className = 'seg'; h.textContent = SEG[s] || ('环节' + s);
+  list.appendChild(h);
+  const grid = document.createElement('div'); grid.className = 'grid';
+  g[s].forEach(n => {
+    const a = document.createElement('a');
+    a.className = 'item'; a.href = 'index.html?p=' + n.id;
+    const tag = n.geom ? '<span class="tag geo">几何层</span>' : (n.quiz ? '<span class="tag">答题</span>' : (C[n.id] ? '<span class="tag">内容卡</span>' : ''));
+    a.innerHTML = `<div class="p">第 ${String(n.page).padStart(2,'0')} 页</div>
+      <div class="t">${n.title}</div>${tag}`;
+    grid.appendChild(a);
+  });
+  list.appendChild(grid);
+});
+</script>
+</body>
+</html>

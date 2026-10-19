@@ -1,0 +1,492 @@
+/* 播放器：进页即播 → 播完弹卡/题板 → 点击继续；几何层在视频结束后继续旋转 */
+(function () {
+  const N = window.NODES, C = window.CARDS, Q = window.QUIZ, SEG = window.SEG_NAME;
+  const v = document.getElementById('video'), geoCv = document.getElementById('geo');
+  const cardEl = document.getElementById('card'), quizEl = document.getElementById('quiz');
+  const pno = document.getElementById('pno'), ptitle = document.getElementById('ptitle'),
+    pseg = document.getElementById('pseg'), modeTag = document.getElementById('modeTag'),
+    hint = document.getElementById('hint'), gate = document.getElementById('gate');
+  const micChip = document.getElementById('micChip'), micTxt = document.getElementById('micTxt'),
+    heard = document.getElementById('heard');
+
+  let idx = -1, cur = null, step = 0, cardOpen = false, quizState = null,
+    branch = false, started = false, listenPaused = false, spin = true, answered = 0, quizDone = false;
+
+  GEO.attach(geoCv);
+
+
+  /* 八组 / 四组线段矢量图（精确：平行=等斜率等距；垂直=闭合直角；延长相交=端点留缝） */
+  const FIGS = {
+    g1: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="10" y1="20" x2="82" y2="20"/><line x1="10" y1="38" x2="82" y2="38"/></g></svg>`,
+    g2: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="12" y1="46" x2="80" y2="10"/><line x1="12" y1="10" x2="80" y2="46"/></g></svg>`,
+    g3: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="32" y1="8" x2="32" y2="48"/><line x1="60" y1="8" x2="60" y2="48"/></g></svg>`,
+    g4: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="36" y1="14" x2="82" y2="24"/><line x1="36" y1="42" x2="82" y2="32"/></g></svg>`,
+    g5: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="10" y1="34" x2="82" y2="22"/><line x1="10" y1="42" x2="82" y2="38"/></g></svg>`,
+    g6: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="12" y1="46" x2="76" y2="14"/><line x1="18" y1="52" x2="82" y2="20"/></g></svg>`,
+    g7: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="20" y1="46" x2="50" y2="14"/><line x1="40" y1="48" x2="70" y2="16"/></g></svg>`,
+    g8: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="46" y1="8" x2="46" y2="48"/><line x1="10" y1="28" x2="82" y2="28"/>
+         <path d="M46,28 L58,28 L58,16 L46,16 Z" fill="none" stroke="#7ef0a8"/></g></svg>`,
+    p1: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="10" y1="18" x2="82" y2="18"/><line x1="10" y1="40" x2="82" y2="40"/></g></svg>`,
+    p2: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="46" y1="8" x2="46" y2="48"/><line x1="10" y1="28" x2="82" y2="28"/>
+         <path d="M46,28 L58,28 L58,16 L46,16 Z" fill="none" stroke="#7ef0a8"/></g></svg>`,
+    p3: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="34" y1="12" x2="82" y2="24"/><line x1="34" y1="44" x2="82" y2="34"/></g></svg>`,
+    p4: `<svg viewBox="0 0 92 56" width="86" height="52"><g stroke="#cfe6ff" stroke-width="2.4" stroke-linecap="round">
+         <line x1="46" y1="8" x2="74" y2="48"/><line x1="28" y1="14" x2="70" y2="46"/>
+         <path d="M50,26 L58,35 L49,40 L41,31 Z" fill="none" stroke="#7ef0a8"/></g></svg>`
+  };
+
+  /* ---------- 页面渲染 ---------- */
+  function paintNode(n) {
+    pno.textContent = String(n.page).padStart(2, '0');
+    ptitle.textContent = n.title;
+    pseg.textContent = SEG[n.seg] || '';
+    modeTag.hidden = !n.geom;
+    modeTag.textContent = n.geom ? '几何层：' + ({ cubeSkew: '异面直线', cubeSame: '同一平面', angle90: '角度扫掠', perp: '垂直', rotatePerp: '垂直旋转' }[n.geom] || n.geom) : '';
+  }
+
+  function hidePanels() { cardEl.hidden = true; quizEl.hidden = true; cardEl.innerHTML = ''; quizEl.innerHTML = ''; cardOpen = false; step = 0; }
+  function showHint(t) { hint.textContent = t; }
+
+  function playNode(i) {
+    if (i < 0 || i >= N.length) return;
+    GEO.stop(); hidePanels();
+    quizState = null; branch = false; answered = 0; quizDone = false;
+    idx = i; cur = N[i]; paintNode(cur);
+
+    if (cur.geom) GEO.start(cur.geom, { follow: true, video: v, ax: 0.49, ay: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.5 : 0.38, scale: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.095 : 0.074, dur: cur.geomDur || 0 });
+
+    if (cur.quiz) renderQuiz(cur.quiz);      // 题板与出题动画同时出现
+    if (cur.video) {
+      v.classList.remove('hidden');
+      v.src = cur.video; v.currentTime = 0;
+      listenPaused = true; setMic('动画播放中 · 暂停聆听', false);
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+      showHint('播放中…');
+    } else {
+      // 无视频的页：保留上一页的末帧作背景，不切成黑屏
+      try { v.pause(); } catch (_) {}
+      setTimeout(onEnded, 80);
+    }
+  }
+
+  function onEnded() {
+    showHint('点击画面 / 空格 / → 继续');
+    listenPaused = false; setMic(quizState ? '答题中 · 说「对了 / 错了」' : '聆听中', true);
+    if (!cur) return;
+    if (cur.quiz) {
+      if (!quizState || quizState.id !== cur.quiz || quizEl.hidden) renderQuiz(cur.quiz);
+      const st = quizEl.querySelector('#qstat');
+      if (st && !quizDone) st.textContent = quizState.q.mode === 'tf' ? '可以作答了 · 八戒即时点评' : '可以作答了 · 全部选好后点「提交」';
+      return;
+    }
+    if (C[cur.id]) { openCard(1); return; }
+    // 无卡片的动画页：保持末帧、几何层继续转
+  }
+
+  /* ---------- 卡片 ---------- */
+  function openCard(s) {
+    const c = C[cur.id]; if (!c) return;
+    step = Math.max(1, s); cardOpen = true;
+    const maxStep = Math.max(1, ...c.blocks.map(b => b.step || 0));
+    const total = c.steps || maxStep;
+    if (c.hero) {
+      cardEl.innerHTML = `
+        <div class="tag">${c.tag || ''}</div>
+        <h2>${c.title}</h2>
+        ${c.blocks.map(b => `<div class="line" data-step="${b.step || 0}">${b.t}</div>`).join('')}
+        <div class="foot">${c.foot || ''}<span id="stepInfo"></span></div>`;
+      cardEl.className = 'hero';
+    } else {
+      cardEl.innerHTML = `
+        <div class="hd"><h2>${c.title}</h2><div class="ln"></div><span class="tag">${c.tag || ''}</span></div>
+        <div class="cols">
+          ${c.blocks.map(b => `<div class="col ${b.wide ? 'wide' : ''}" data-step="${b.step || 0}">
+              <span class="n">${b.n || '·'}</span><span>${b.t}</span></div>`).join('')}
+          ${c.slot ? `<div class="col wide slot">拖入学生作品照片 / 直接投影</div>` : ''}
+        </div>
+        <div class="foot"><span>${c.foot || ''}</span><span id="stepInfo"></span></div>`;
+      cardEl.className = 'cardbar';
+    }
+    cardEl.hidden = false;
+    renderStep();
+    if (c.timer) startTimer(c.timer);
+  }
+
+  function renderStep() {
+    const c = C[cur.id]; if (!c) return;
+    const maxStep = Math.max(1, ...c.blocks.map(b => b.step || 0));
+    cardEl.querySelectorAll('[data-step]').forEach(el => {
+      const s = +el.dataset.step;
+      if (c.hero) el.classList.toggle('show', s <= step);
+      else if (el.classList.contains('col')) el.classList.toggle('show', s <= step);
+    });
+    const info = cardEl.querySelector('#stepInfo');
+    if (info) info.textContent = maxStep > 1 ? `第 ${Math.min(step, maxStep)} / ${maxStep} 步` : '';
+  }
+
+  let timerId = null;
+  function startTimer(sec) {
+    clearInterval(timerId);
+    let left = sec;
+    const info = cardEl.querySelector('.foot span');
+    timerId = setInterval(() => {
+      left--;
+      if (info) info.textContent = `计时 ${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
+      if (left <= 0) { clearInterval(timerId); if (info) info.textContent = '时间到'; }
+    }, 1000);
+  }
+
+
+  /* ---------- 线段小图（八组 / 四组）---------- */
+  const G8 = [
+    { no: 1, lines: [[24, 92, 148, 40], [34, 116, 158, 64]] },
+    { no: 2, lines: [[26, 32, 150, 96], [30, 96, 150, 34]] },
+    { no: 3, lines: [[64, 20, 64, 108], [118, 20, 118, 108]] },
+    { no: 4, lines: [[26, 44, 156, 56], [26, 92, 156, 80]] },
+    { no: 5, lines: [[30, 28, 140, 104], [34, 104, 146, 26]] },
+    { no: 6, lines: [[22, 50, 156, 50], [22, 86, 156, 86]] },
+    { no: 7, lines: [[60, 116, 104, 16], [88, 116, 118, 16]] },
+    { no: 8, lines: [[30, 63, 150, 63], [110, 20, 110, 106]], mark: [110, 63] }
+  ];
+  const G4 = [
+    [[24, 46, 150, 46], [24, 78, 150, 78]],
+    [[24, 86, 150, 86], [120, 20, 120, 96]],
+    [[24, 44, 150, 70], [26, 92, 150, 88]],
+    [[57, 22, 125, 90], [57, 90, 125, 22]]
+  ];
+  function svgLines(lines, mark) {
+    const seg = lines.map(([a, b, c, d]) => `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#8fd8ff" stroke-width="3" stroke-linecap="round"/>`).join('');
+    let sq = '';
+    if (mark) { const s = 12, [mx, my] = mark; sq = `<path d="M ${mx} ${my} L ${mx + s} ${my} L ${mx + s} ${my - s} L ${mx} ${my - s} Z" fill="none" stroke="#ffd166" stroke-width="2.2"/>`; }
+    return `<svg class="mini" viewBox="0 0 182 126">${seg}${sq}</svg>`;
+  }
+
+  /* ---------- 答题 ---------- */
+  function renderQuiz(qid) {
+    const q = Q[qid];
+    const prev = (quizState && quizState.id === qid) ? quizState : null;
+    quizState = { id: qid, q, picks: prev ? prev.picks : {}, reasons: prev ? prev.reasons : {} };
+    let rows = '';
+    if (q.mode === 'sort') {
+      rows = q.items.map(it => {
+        const g = G8[it.k - 1];
+        return `<div class="q" data-k="${it.k}"><span class="txt">${svgLines(g.lines, g.mark)}<span class="lbl">第 ${it.k} 组</span></span>
+        <span class="btns"><button data-v="yes">相交</button><button data-v="no">不相交</button></span></div>`;
+      }).join('');
+    } else if (q.mode === 'choice') {
+      rows = q.items.map(it => {
+        const mark = (it.k === 2) ? [120, 86] : (it.k === 4) ? [91, 56] : null;
+        return `<div class="q" data-k="${it.k}"><span class="txt">${svgLines(G4[it.k - 1], mark)}<span class="lbl">第 ${it.k} 组</span></span>
+        <span class="btns">${q.options.map(o => `<button data-v="${o}">${o}</button>`).join('')}</span></div>`;
+      }).join('');
+    } else {
+      rows = q.items.map((it, i) => `<div class="q" data-k="${i}"><span class="txt">${i + 1}. ${it.q}</span>
+        <span class="btns"><button data-v="对">对</button><button data-v="错">错</button></span></div>`).join('');
+    }
+    quizEl.innerHTML = `<h3>${q.title}</h3><div style="font-size:12.5px;color:#9fb2cc;margin-bottom:4px">${q.prompt}</div>
+      ${rows}
+      <div class="why" id="qwhy"></div>
+      <div class="qf"><span id="qstat">${q.mode === 'tf' ? '逐题判定 · 八戒即时点评' : '全部选好后点「提交」'}</span>
+      <span class="qbtns">${q.mode === 'tf' ? '' : '<button id="qsubmit">提交</button>'}<button id="qskip">跳过</button><button id="qnext" hidden>下一段 ▶</button></span></div>`;
+    quizEl.hidden = false;
+    quizEl.querySelectorAll('.q').forEach(row => {
+      row.querySelectorAll('button').forEach(b => b.onclick = () => pick(row, b));
+    });
+    const sub = quizEl.querySelector('#qsubmit');
+    if (sub) sub.onclick = grade;
+    const qs = quizEl.querySelector('#qskip');
+    if (qs) qs.onclick = e => { e.stopPropagation(); skipNext(); };
+    const qn = quizEl.querySelector('#qnext');
+    if (qn) { qn.onclick = () => next(); qn.hidden = !quizDone; }
+    // 恢复已经答过的题（分支回来后会重绘）
+    Object.entries(quizState.reasons || {}).forEach(([k, r]) => {
+      const row = quizEl.querySelector(`.q[data-k="${k}"]`);
+      if (!row) return;
+      row.querySelectorAll('button').forEach(b => {
+        if (b.dataset.v === quizState.picks[k]) b.classList.add(r.ok ? 'sel' : 'bad');
+      });
+      const w = document.createElement('div'); w.className = 'why'; w.textContent = (r.ok ? '✔ ' : '✘ ') + r.why;
+      row.after(w);
+    });
+  }
+
+  function pick(row, btn) {
+    const q = quizState.q;
+    row.querySelectorAll('button').forEach(b => b.classList.remove('sel', 'bad'));
+    btn.classList.add('sel');
+    quizState.picks[row.dataset.k] = btn.dataset.v;
+    if (q.mode === 'tf') {
+      const it = q.items[+row.dataset.k];
+      const ok = btn.dataset.v === it.ans;
+      if (!ok) btn.classList.add('bad');
+      answered++;
+      quizState.reasons[row.dataset.k] = { ok, why: it.why };
+      row.querySelector('.why')?.remove();
+      const w = document.createElement('div'); w.className = 'why'; w.textContent = (ok ? '✔ ' : '✘ ') + it.why;
+      row.after(w);
+      playBranch(ok ? q.right : q.wrong, () => { renderQuizKeep(row.dataset.k, ok); });
+    }
+  }
+
+  function voiceAnswer(n, v) {
+    if (!quizState || quizEl.hidden) return false;
+    const q = quizState.q;
+    if (q.mode === 'sort') v = (v === '相交') ? 'yes' : 'no';   // 分类题的按钮值是 yes/no
+    const key = (q.mode === 'tf') ? (n - 1) : n;      // tf 的 data-k 从 0 开始
+    const row = quizEl.querySelector(`.q[data-k="${key}"]`);
+    if (!row) return false;
+    const btn = [...row.querySelectorAll('button')].find(b => b.dataset.v === v || b.dataset.v.startsWith(v) || v.startsWith(b.dataset.v));
+    if (!btn) return false;
+    pick(row, btn); return true;
+  }
+
+  function renderQuizKeep(k, ok) {
+    renderQuiz(quizState.id);
+    const row = quizEl.querySelector(`.q[data-k="${k}"]`);
+    if (row) { row.querySelectorAll('button').forEach(b => { if (b.dataset.v === quizState.picks[k]) b.classList.add(ok ? 'sel' : 'bad'); }); }
+    if (answered >= quizState.q.items.length) {
+      quizDone = true;
+      const st = quizEl.querySelector('#qstat');
+      if (st) st.textContent = '本页完成 · 点「下一段」继续';
+    }
+    const qn2 = quizEl.querySelector('#qnext'); if (qn2) qn2.hidden = !quizDone;
+  }
+
+  function grade() {
+    const q = quizState.q, picks = quizState.picks;
+    let allRight = true, miss = [];
+    q.items.forEach(it => {
+      const k = String(it.k), got = picks[k];
+      const row = quizEl.querySelector(`.q[data-k="${k}"]`);
+      const want = it.ans;
+      if (!row) return;
+      row.querySelectorAll('button').forEach(b => {
+        if (b.dataset.v === want) b.classList.add('sel');
+        if (b.dataset.v === got && got !== want) b.classList.add('bad');
+      });
+      if (got !== want) { allRight = false; miss.push(k); }
+    });
+    const why = quizEl.querySelector('#qwhy');
+    if (why) why.textContent = (allRight ? '全对！' : `再想想第 ${miss.join('、')} 组。`) + (q.why ? ' ' + q.why : '');
+    playBranch(allRight ? q.right : q.wrong, () => {
+      quizDone = true;
+      if (quizState) renderQuizKeep(null, true);
+      const w2 = quizEl.querySelector('#qwhy'); if (w2 && q.why) w2.textContent = q.why;
+    });
+  }
+
+  function playBranch(url, after) {
+    branch = true;
+    const keepQuiz = quizEl.innerHTML;
+    hidePanels();
+    listenPaused = true; setMic('八戒点评中 · 暂停聆听', false);
+    v.classList.remove('hidden');
+    v.src = url; v.currentTime = 0; v.play().catch(() => {});
+    const done = () => {
+      v.removeEventListener('ended', done);
+      branch = false; listenPaused = false; setMic('聆听中', true);
+      if (after) after();
+    };
+    v.addEventListener('ended', done, { once: true });
+  }
+
+  /* ---------- 推进 ---------- */
+  function skipNext() {
+    if (branch) return;
+    if (idx + 1 < N.length) playNode(idx + 1);
+  }
+
+  function next() {
+    if (branch) return;
+    if (quizState && !quizEl.hidden && !quizDone) {
+      const total = quizState.q.items.length;
+      const picked = Object.keys(quizState.picks || {}).length;
+      if (picked >= total) {          // 全部选完但没点提交 → 直接判分
+        if (quizState.q.mode === 'tf') { quizDone = true; }
+        else { grade(); }
+        return;
+      }
+      const st = quizEl.querySelector('#qstat');
+      if (st) st.textContent = `还有 ${total - picked} 组没选`;
+      return;
+    }
+    if (cardOpen) {
+      const c = C[cur.id];
+      const maxStep = Math.max(1, ...c.blocks.map(b => b.step || 0));
+      if (step < maxStep) { step++; renderStep(); return; }
+    }
+    if (idx + 1 < N.length) playNode(idx + 1);
+  }
+  function prev() { if (!branch && idx > 0) playNode(idx - 1); }
+
+  /* ---------- 语音 ---------- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null;
+  function setMic(t, live) {
+    micTxt.textContent = t;
+    micChip.querySelector('.dot').style.background = live ? '#54d07a' : '#d0a054';
+    micChip.querySelector('.dot').style.boxShadow = live ? '0 0 8px #54d07a' : '0 0 8px #d0a054';
+  }
+  const CN = { '零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9 };
+  function cn2num(t) {
+    if (/^\d+$/.test(t)) return +t;
+    if (t === '十') return 10;
+    let m = t.match(/^([一二两三四五六七八九])?十([一二三四五六七八九])?$/);
+    if (m) return (m[1] ? CN[m[1]] : 1) * 10 + (m[2] ? CN[m[2]] : 0);
+    if (t.length === 1 && CN[t] != null) return CN[t];
+    return NaN;
+  }
+  function jumpPage(n) {
+    const i = N.findIndex(x => x.page === n);
+    if (i < 0) return false;
+    playNode(i); return true;
+  }
+  function jumpSeg(k) {
+    const i = N.findIndex(x => x.seg === k);
+    if (i < 0) return false;
+    playNode(i); return true;
+  }
+  function toast(msg) {
+    let el = document.getElementById('vtoast');
+    if (!el) { el = document.createElement('div'); el.id = 'vtoast'; document.getElementById('stage').appendChild(el); }
+    el.innerHTML = msg; el.classList.add('on');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 3200);
+  }
+  function norm(s) { return (s || '').replace(/[\s，。！？、,.!?「」“”"']/g, ''); }
+  function handleText(text) {
+    if (!text) return;
+    heard.hidden = false;
+    heard.innerHTML = `听到：<b>${text}</b>`;
+    const t = norm(text);
+    // —— 直接切换：播放中也可以用 ——
+    let mm;
+    if ((mm = t.match(/^(?:跳到|到|去|打开)?第?([一二两三四五六七八九十0-9]{1,3})(?:页|段|节)$/))) {
+      const n = cn2num(mm[1]);
+      if (n && jumpPage(n)) { heard.innerHTML += `<span class="hit">→ 第 ${n} 页</span>`; return; }
+      toast(`没有第 ${mm[1]} 页`); return;
+    }
+    if ((mm = t.match(/^(?:跳到|到|去|打开)?(?:第)?([一二三四五六])环节$/))) {
+      const k = cn2num(mm[1]);
+      if (k && jumpSeg(k)) { heard.innerHTML += `<span class="hit">→ 环节 ${mm[1]}</span>`; return; }
+      return;
+    }
+    if (/^(回到开头|从头开始|回到第一页|第一页)$/.test(t)) { playNode(0); return; }
+    if (/^(下一段|下一个|继续|往下|下一页)$/.test(t)) { if (!branch) next(); return; }
+    if (/^(上一段|上一个|返回|上一页)$/.test(t)) { if (!branch) prev(); return; }
+    if (/^(重播|再放一遍|再来一次)$/.test(t)) { playNode(idx); return; }
+    if (/^(语音口令|口令|帮助|怎么用)$/.test(t)) {
+      toast('口令：第N页/第N段 · 环节一~六 · 下一段/上一段 · 跳过 · 第3组相交 · 第2题垂直 · 第四题错 · 提交 · 重播 · 转起来');
+      return;
+    }
+    if (/^(跳过|跳过这题|跳过本题|不会|不知道)$/.test(t)) { skipNext(); return; }
+    if (/^(提交|交卷|判分|批改)$/.test(t)) { if (quizState && !quizEl.hidden) grade(); return; }
+    // —— 以下口令在播放途中忽略，避免误触 ——
+    if (listenPaused || branch || (cur && cur.video && !v.ended && !v.paused)) return;
+    // 语音逐题作答：「第3组相交」「第2题垂直」「第四题错」
+    if (quizState && !quizEl.hidden) {
+      const ans = t.match(/^第?([0-9一二两三四五六七八]{1,2})(?:组|题|句|条|个)?(相交|不相交|平行|垂直|都不是|对|错|正确|错误)$/);
+      if (ans) {
+        const n = cn2num(ans[1]);
+        const raw = ans[2];
+        const val = (raw === '正确') ? '对' : (raw === '错误') ? '错' : raw;
+        if (n && voiceAnswer(n, val)) { heard.innerHTML += `<span class="hit">→ 第 ${n} 题 ${val}</span>`; return; }
+      }
+      if (/^(对了|答对了|正确)$/.test(t) || /判断对了/.test(t)) { const q = quizState.q; playBranch(q.right, () => renderQuizKeep(null, true)); return; }
+      if (/^(错了|答错了|不对)$/.test(t) || /判断错了/.test(t)) { const q = quizState.q; playBranch(q.wrong, () => renderQuizKeep(null, false)); return; }
+    }
+    const map = [
+      [/^(暂停)$/, () => v.pause()],
+      [/^(接着放|继续播放)$/, () => v.play()],
+      [/^(暂停旋转|别转了)$/, () => { spin = false; GEO.setSpin(false); }],
+      [/^(转起来|继续转)$/, () => { spin = true; GEO.setSpin(true); }]
+    ];
+    for (const [re, fn] of map) if (re.test(t)) { fn(); heard.innerHTML += `<span class="hit">→ ${re.source.slice(2, 8)}…</span>`; return; }
+    // 页面口令（取最长命中）
+    let best = null, bestLen = 0;
+    N.forEach(n => (n.say || []).forEach(s => { const k = norm(s); if (k && t.includes(k) && k.length > bestLen) { best = n; bestLen = k.length; } }));
+    if (best) { heard.innerHTML += `<span class="hit">→ 第 ${best.page} 页 · ${best.title}</span>`; playNode(N.indexOf(best)); }
+  }
+
+  function startVoice() {
+    if (!SR) { setMic('语音不可用 · 用按钮/点击', false); return; }
+    recog = new SR(); recog.lang = 'zh-CN'; recog.continuous = true; recog.interimResults = true; recog.maxAlternatives = 3;
+    recog.onresult = e => {
+      if (listenPaused) return;
+      let txt = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+      if (txt.trim()) handleText(txt.trim());
+    };
+    recog.onend = () => { try { if (started && !listenPaused) recog.start(); } catch (_) {} };
+    recog.onerror = () => setMic('识别中断 · 可点按钮', false);
+    try { recog.start(); setMic('聆听中', true); } catch (_) { }
+  }
+
+  /* ---------- 事件 ---------- */
+  document.getElementById('startBtn').onclick = () => {
+    gate.classList.add('hidden'); started = true;
+    playNode(0); startVoice();
+  };
+  document.getElementById('btnNext').onclick = e => { e.stopPropagation(); next(); };
+  document.getElementById('btnPrev').onclick = e => { e.stopPropagation(); prev(); };
+  document.getElementById('btnReplay').onclick = e => { e.stopPropagation(); playNode(idx); };
+  document.getElementById('btnSpin').onclick = e => { e.stopPropagation(); spin = !spin; GEO.setSpin(spin); e.target.textContent = spin ? '旋转中' : '已暂停'; };
+
+  v.addEventListener('ended', onEnded);
+  v.addEventListener('error', () => {
+    const src = v.getAttribute('src') || '';
+    if (branch) { branch = false; listenPaused = false; if (quizState) renderQuizKeep(null, true); return; }
+    if (src) showHint('视频缺失：' + src);
+    onEnded();
+  });
+  v.addEventListener('play', () => { listenPaused = true; setMic('动画播放中 · 暂停聆听', false); });
+  v.addEventListener('pause', () => { if (!v.ended) setMic('已暂停', false); });
+
+  document.getElementById('stage').addEventListener('click', e => {
+    if (e.target.closest('button,#card,#quiz,.nav,.topbar,.micbox')) return;
+    if (cur && cur.video && !v.paused && !v.ended) { v.pause(); return; } // 播放中点击=暂停
+    next();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'ArrowRight') { e.preventDefault(); next(); }
+    else if (e.code === 'ArrowLeft') { e.preventDefault(); prev(); }
+    else if (e.key === 'r' || e.key === 'R') playNode(idx);
+    else if (e.key === 's' || e.key === 'S') { spin = !spin; GEO.setSpin(spin); }
+  });
+
+  /* 深链：?p=p13 直接进入该页；?autostart=1 从封面开始 */
+  (function(){
+    const q = new URLSearchParams(location.search);
+    const pid = q.get('p'), auto = q.get('autostart');
+    if (!pid && !auto) return;
+    const boot = () => {
+      const g = document.getElementById('gate'); if (g) g.classList.add('hidden');
+      started = true;
+      const i = pid ? N.findIndex(n => n.id === pid) : 0;
+      playNode(i >= 0 ? i : 0);
+      startVoice();
+    };
+    if (document.readyState === 'complete') setTimeout(boot, 300); else window.addEventListener('load', () => setTimeout(boot, 300));
+  })();
+
+  /* 探针 */
+  window.APP = {
+    say: t => handleText(t),
+    state: () => ({ idx, id: cur && cur.id, page: cur && cur.page, card: !cardEl.hidden, step, quiz: !quizEl.hidden, branch, geo: GEO.mode, geoOn: GEO.active, geoTime: +GEO.time.toFixed(2), videoEnded: v.ended, videoPaused: v.paused, src: v.getAttribute('src') }),
+    go: id => { const i = N.findIndex(n => n.id === id); if (i >= 0) playNode(i); },
+    next, prev, answer: (k, val) => { const row = quizEl.querySelector(`.q[data-k="${k}"]`); if (row) { const b = [...row.querySelectorAll('button')].find(b => b.dataset.v === val); if (b) b.click(); } },
+    submit: () => { const b = quizEl.querySelector('#qsubmit'); if (b) b.click(); },
+    spin: val => { spin = val; GEO.setSpin(val); }
+  };
+})();
