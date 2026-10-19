@@ -67,7 +67,7 @@
     if (cur.geom) GEO.start(cur.geom, { follow: true, video: v, ax: 0.49, ay: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.5 : 0.38, scale: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.095 : 0.074, dur: cur.geomDur || 0 });
 
     if (cur.quiz) renderQuiz(cur.quiz);      // 题板与出题动画同时出现
-    if (cur.cardEarly) setTimeout(() => { if (cur && cur.cardEarly && cardEl.hidden) openCard(1); }, 800);
+    if (cur.cardEarly) setTimeout(() => { if (cur && cur.cardEarly && cardEl.hidden) openCard(1); }, 300);
     if (cur.video) {
       v.classList.remove('hidden');
       v.src = cur.video; v.currentTime = 0;
