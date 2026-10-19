@@ -12,7 +12,7 @@ window.CARDS = {
     foot: "点击进入"
   },
   p05: {
-    hero: true, title: "直线的特点", tag: "环节一 · 认识直线", steps: 3,
+    hero: true, center: true, title: "直线的特点", tag: "环节一 · 认识直线", steps: 3,
     blocks: [
       { n: "1", t: "可以向<b>两端</b>无限延伸", step: 1, wide: true },
       { n: "2", t: "两端都<b>没有端点</b>", step: 2, wide: true },
