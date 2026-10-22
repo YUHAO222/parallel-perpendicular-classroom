@@ -12,16 +12,20 @@ window.NODES = [
   { id: "p09", page: 9, seg: 2, title: "①—⑧ 八组图形分类", type: "quiz", video: "videos/A_ask_plate.mp4", quiz: "q09", say: ["分一分", "八组图形分类"] },
   { id: "p10", page: 10, seg: 2, title: "分类结果", type: "card", video: "", say: ["看结果", "哪些相交哪些不相交"], steps: 23 },
   { id: "p12", page: 12, seg: 3, title: "平行线的定义", type: "card", video: "videos/3-3_wk_probe_premise.mp4", say: ["什么是平行线", "平行线的定义"] },
-  { id: "p13", page: 13, seg: 3, title: "立方体：两个不同的面", type: "clip", video: "videos/p13_v2.mp4", geom: "cubeSkew", say: ["看立方体", "两个不同的面"] },
-  { id: "p14", page: 14, seg: 3, title: "立方体：同一个面", type: "clip", video: "videos/p14_v2.mp4", geom: "cubeSame", say: ["同一个面", "这才是平行线"] },
+  { id: "p13", page: 13, seg: 3, title: "立方体：两个不同的面", type: "clip", video: "videos/p13_clean.mp4", say: ["看立方体", "两个不同的面"] },
+  { id: "p14", page: 14, seg: 3, title: "立方体：同一个面", type: "clip", video: "videos/p14_clean.mp4", say: ["同一个面", "这才是平行线"] },
   { id: "p17", page: 17, seg: 3, title: "本段知识点", type: "card", video: "", say: ["本段知识点", "梳理一下"] },
   { id: "p18", page: 18, seg: 4, title: "旋转到 90° 成直角", type: "clip", video: "videos/p18_geom.mp4", say: ["转成直角", "演示垂直"] },
   { id: "p19", page: 19, seg: 4, title: "互相垂直的定义", type: "card", video: "videos/p19_plate.mp4", geom: "perp", say: ["什么是垂直", "垂线垂足"] },
-  { id: "p20", page: 20, seg: 4, title: "转一转，还是垂直吗", type: "clip", video: "videos/p20_wk_directions.mp4", say: ["转一转还是垂直吗", "摆放方向"] },
+  { id: "p20", page: 20, seg: 4, title: "转一转，还是垂直吗", type: "clip", video: "videos/p20_clean.mp4", say: ["转一转还是垂直吗", "摆放方向"] },
   { id: "p21", page: 21, seg: 4, title: "小结：垂直与方向无关", type: "card", video: "", say: ["垂直与方向无关", "垂直小结"] },
   { id: "p22", page: 22, seg: 5, title: "第一题：平行还是垂直", type: "quiz", video: "videos/p22_plate.mp4", quiz: "q22", say: ["第一题", "基础题"] },
   { id: "p23", page: 23, seg: 5, title: "第一题的答案", type: "activity", video: "videos/p23_fix.mp4", say: ["第一题答案", "点评一下"], slot: true },
   { id: "p24", page: 24, seg: 5, title: "第二题：判断对错", type: "quiz", video: "videos/p24_plate.mp4", quiz: "q24", say: ["第二题", "判断题"] },
+  { id: "p24a", page: 24, seg: 5, title: "判断 1：不相交就是平行吗", type: "quiz", video: "", quiz: "q24a", say: ["第一小题", "判断第一题"] },
+  { id: "p24b", page: 24, seg: 5, title: "判断 2：相交成直角", type: "quiz", video: "", quiz: "q24b", say: ["第二小题", "判断第二题"] },
+  { id: "p24c", page: 24, seg: 5, title: "判断 3：交点叫垂足吗", type: "quiz", video: "", quiz: "q24c", say: ["第三小题", "判断第三题"] },
+  { id: "p24d", page: 24, seg: 5, title: "判断 4：不平行就相交", type: "quiz", video: "", quiz: "q24d", say: ["第四小题", "判断第四题"] },
   { id: "p25", page: 25, seg: 5, title: "第三题：折纸游戏", type: "activity", video: "", say: ["第三题", "折纸游戏"] },
   { id: "p26", page: 26, seg: 6, title: "知识导图", type: "card", cardEarly: true, video: "videos/p26_clean.mp4", say: ["总结", "知识梳理"] },
   { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/5-12_wk_life_examples.mp4", say: ["生活中的例子", "举例子"] },
@@ -53,6 +57,30 @@ window.QUIZ = {
     ],
     right: "videos/B_yes_plate.mp4", wrong: "videos/C_no_plate.mp4",
     why: "第 3 组延长后才相交，不是平行；第 2、4 组相交成直角，要标出垂足。"
+  },
+  q24a: {
+    mode: "tf", title: "第二题（判断）· 第 1 小题",
+    prompt: "判断：不相交的两条直线叫平行线。（括号里写「对」或「错」）",
+    items: [ { q: "不相交的两条直线叫平行线。", ans: "错", why: "少了「在同一平面内」。" } ],
+    right: "videos/5-1c_bj_wrong.mp4", wrong: "videos/5-1b_bj_fix.mp4"
+  },
+  q24b: {
+    mode: "tf", title: "第二题（判断）· 第 2 小题",
+    prompt: "判断：两条直线相交成直角，就说这两条直线互相垂直。",
+    items: [ { q: "两条直线相交成直角，就说这两条直线互相垂直。", ans: "对", why: "这正是互相垂直的定义。" } ],
+    right: "videos/5-4a_bj_q2_right.mp4", wrong: "videos/5-4b_bj_q2_wrong.mp4"
+  },
+  q24c: {
+    mode: "tf", title: "第二题（判断）· 第 3 小题",
+    prompt: "判断：两条直线相交，交点叫垂足。",
+    items: [ { q: "两条直线相交，交点叫垂足。", ans: "错", why: "只有相交成直角，交点才叫垂足。" } ],
+    right: "videos/5-6a_bj_q3_right.mp4", wrong: "videos/5-6b_bj_q3_wrong.mp4"
+  },
+  q24d: {
+    mode: "tf", title: "第二题（判断）· 第 4 小题",
+    prompt: "判断：在同一平面内，两条直线不平行就一定相交。",
+    items: [ { q: "在同一平面内，两条直线不平行就一定相交。", ans: "对", why: "同一平面内只有相交、平行两种位置关系。" } ],
+    right: "videos/5-8a_bj_q4_right.mp4", wrong: "videos/5-8b_bj_q4_wrong.mp4"
   },
   q24: {
     mode: "tf",

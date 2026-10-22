@@ -55,7 +55,7 @@
     modeTag.textContent = n.geom ? '几何层：' + ({ cubeSkew: '异面直线', cubeSame: '同一平面', angle90: '角度扫掠', perp: '垂直', rotatePerp: '垂直旋转' }[n.geom] || n.geom) : '';
   }
 
-  function hidePanels() { cardEl.hidden = true; quizEl.hidden = true; cardEl.innerHTML = ''; quizEl.innerHTML = ''; cardOpen = false; step = 0; }
+  function hidePanels() { cardEl.hidden = true; quizEl.hidden = true; cardEl.innerHTML = ''; quizEl.innerHTML = ''; cardOpen = false; step = 0; if (typeof stopTimer === 'function') stopTimer(); }
   function showHint(t) { hint.textContent = t; }
 
   function playNode(i) {
@@ -137,16 +137,34 @@
     if (info) info.textContent = maxStep > 1 ? `第 ${Math.min(step, maxStep)} / ${maxStep} 步` : '';
   }
 
-  let timerId = null;
+  let timerId = null, timerEl = null;
+  function bigTimer() {
+    if (timerEl) return timerEl;
+    timerEl = document.createElement('div');
+    timerEl.id = 'bigTimer';
+    timerEl.innerHTML = '<div class="bt-label">计时</div><div class="bt-time">2:00</div><div class="bt-bar"><i></i></div>';
+    (document.getElementById('stage') || document.body).appendChild(timerEl);
+    return timerEl;
+  }
+  function stopTimer() {
+    clearInterval(timerId);
+    if (timerEl) timerEl.classList.remove('show', 'warn', 'danger');
+  }
   function startTimer(sec) {
     clearInterval(timerId);
+    const el = bigTimer();
+    const tEl = el.querySelector('.bt-time'), barEl = el.querySelector('.bt-bar i');
     let left = sec;
-    const info = cardEl.querySelector('.foot span');
-    timerId = setInterval(() => {
-      left--;
-      if (info) info.textContent = `计时 ${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
-      if (left <= 0) { clearInterval(timerId); if (info) info.textContent = '时间到'; }
-    }, 1000);
+    el.classList.add('show');
+    const paint = () => {
+      tEl.textContent = left <= 0 ? '时间到' : Math.floor(Math.max(0, left) / 60) + ':' + String(Math.max(0, left) % 60).padStart(2, '0');
+      tEl.className = 'bt-time' + (left <= 0 ? ' done' : left <= 10 ? ' danger' : left <= 30 ? ' warn' : '');
+      barEl.style.width = (Math.max(0, left) / sec * 100) + '%';
+      el.classList.toggle('warn', left <= 30 && left > 10);
+      el.classList.toggle('danger', left <= 10 && left > 0);
+    };
+    paint();
+    timerId = setInterval(() => { left--; paint(); if (left <= 0) clearInterval(timerId); }, 1000);
   }
 
 

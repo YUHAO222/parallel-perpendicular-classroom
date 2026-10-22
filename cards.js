@@ -12,13 +12,11 @@ window.CARDS = {
     foot: "点击进入"
   },
   p05: {
-    hero: true, center: true, title: "直线的特点", tag: "环节一 · 认识直线", steps: 3,
+    hero: true, center: true, title: "直线的特点", tag: "环节一 · 认识直线", steps: 1,
     blocks: [
-      { n: "1", t: "可以向<b>两端</b>无限延伸", step: 1, wide: true },
-      { n: "2", t: "两端都<b>没有端点</b>", step: 2, wide: true },
-      { n: "3", t: "所以直线<b>不能度量</b>长短", step: 3, wide: true }
+      { n: "1", t: "可以向<b>两端</b>无限延伸", step: 1, wide: true }
     ],
-    foot: "点击逐条揭示"
+    foot: "点击继续"
   },
   p07: {
     title: "画一画：两条直线", tag: "动手操作", steps: 2, timer: 120,
