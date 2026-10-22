@@ -100,6 +100,7 @@
   const ASK_TIPS = ['什么是平行线？', '垂足在哪里？', '怎么判断垂直？', '平行和垂直有什么不同？'];
   const ASK_LOG = [];
   const ASK_REFUSAL = '我只回答《平行与垂直》这节课的问题，你可以问我“什么是平行线”“垂足在哪里”“怎么判断垂直”。';
+  let ASK_SRC = '本课范围';
   const ASK_FOOT = '只答本课：平行线 / 垂直 / 垂足 / 记法 / 判断方法 / 练习 / 生活例子；问别的会被拒答。';
   /* 没有后端（GitHub Pages）时的本课知识卡：关键词命中，措辞取自本课 */
   const ASK_KB = [
@@ -119,7 +120,7 @@
 
   const askHTML = () => `
     <div class="ask">
-      <div class="askhd">课堂助教 · 只答本课的问题<span class="tagx" id="askSrc">本课范围</span></div>
+      <div class="askhd">课堂助教 · 只答本课的问题<span class="tagx" id="askSrc">${ASK_SRC}</span></div>
       <div class="asklog" id="askLog"></div>
       <div class="askrow">
         <input id="askIn" type="text" maxlength="120" autocomplete="off"
@@ -188,6 +189,7 @@
       text = a; src = '本课知识卡 · 离线';
     }
     ASK_LOG.push({ role: 'a', text: text, cls: cls });
+    ASK_SRC = src;
     const tag = host.querySelector('#askSrc'); if (tag) tag.textContent = src;
     askRepaint(host); askBusy(host, false);
     const i2 = host.querySelector('#askIn'); if (i2) { try { i2.focus(); } catch (_) { } }
