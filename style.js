@@ -96,6 +96,117 @@
     // 无卡片的动画页：保持末帧、几何层继续转
   }
 
+  /* ---------- 最后一页：课堂助教（只答本课内容） ---------- */
+  const ASK_TIPS = ['什么是平行线？', '垂足在哪里？', '怎么判断垂直？', '平行和垂直有什么不同？'];
+  const ASK_LOG = [];
+  const ASK_REFUSAL = '我只回答《平行与垂直》这节课的问题，你可以问我“什么是平行线”“垂足在哪里”“怎么判断垂直”。';
+  const ASK_FOOT = '只答本课：平行线 / 垂直 / 垂足 / 记法 / 判断方法 / 练习 / 生活例子；问别的会被拒答。';
+  /* 没有后端（GitHub Pages）时的本课知识卡：关键词命中，措辞取自本课 */
+  const ASK_KB = [
+    [/平行线|什么叫平行|平行的定义/, '在同一个平面内不相交的两条直线叫做平行线，也可以说这两条直线互相平行。'],
+    [/垂足/, '两条直线互相垂直时的交点叫垂足。只有相交成直角才是垂直，这时的交点才叫垂足，记得标直角符号。'],
+    [/垂直|直角/, '两条直线相交成直角，就说这两条直线互相垂直，交点叫垂足；判断时先看是否相交，再看角是不是直角。'],
+    [/记法|符号|∥|⊥/, '平行记作 a∥b，读作“a 平行于 b”；垂直记作 a⊥b，读作“a 垂直于 b”。'],
+    [/同一平面|同一个平面/, '平行线必须是“在同一个平面内”不相交的两条直线；只说不相交不够，不在同一平面上的两条直线不相交也不是平行线。'],
+    [/延长/, '看着不相交、延长后却相交的两条直线，不是平行线；延长后仍然不相交，才是平行。'],
+    [/距离/, '两条平行线之间的距离处处相等。'],
+    [/方向|摆放|怎么转/, '垂直与摆放方向无关，只要相交成直角，就是互相垂直。'],
+    [/不同|区别|一样吗/, '平行是同一平面内不相交的两条直线；垂直是相交成直角的两条直线。平行不相交，垂直一定相交，交点叫垂足。'],
+    [/例子|生活|找一找/, '平行：铁轨、双杠、窗框对边、斑马线；垂直：十字路口、门窗框的横框与竖框、黑板相邻两边。'],
+    [/一条|单独/, '平行与垂直都是两条直线之间的关系，不能说一条直线“互相平行”。']
+  ];
+  function askLocal(q) { for (const it of ASK_KB) if (it[0].test(q)) return it[1]; return ASK_REFUSAL; }
+
+  const askHTML = () => `
+    <div class="ask">
+      <div class="askhd">课堂助教 · 只答本课的问题<span class="tagx" id="askSrc">本课范围</span></div>
+      <div class="asklog" id="askLog"></div>
+      <div class="askrow">
+        <input id="askIn" type="text" maxlength="120" autocomplete="off"
+               placeholder="输入问题，按回车发送（例：垂足在哪里？）">
+        <button id="askBtn" type="button">提问</button>
+      </div>
+      <div class="askchips">${ASK_TIPS.map(t => `<span class="askchip" data-q="${t}">${t}</span>`).join('')}</div>
+      <div class="askfoot" id="askFoot">${ASK_FOOT}</div>
+    </div>`;
+
+  function askAppend(host, m) {
+    const log = host.querySelector('#askLog'); if (!log) return;
+    const d = document.createElement('div');
+    d.className = 'askb ' + (m.role === 'q' ? 'q' : 'a') + (m.cls ? ' ' + m.cls : '');
+    if (m.role === 'a') {
+      const w = document.createElement('span'); w.className = 'who';
+      w.textContent = m.cls === 'out' ? '助教 · 课外问题' : (m.cls === 'wait' ? '助教 · 正在想' : '助教');
+      d.appendChild(w);
+    }
+    const t = document.createElement('span'); t.textContent = m.text; d.appendChild(t);
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  function askRepaint(host) {
+    const log = host.querySelector('#askLog'); if (!log) return;
+    log.innerHTML = '';
+    if (!ASK_LOG.length) {
+      const h = document.createElement('div'); h.className = 'askhint';
+      h.textContent = '问我：什么是平行线？垂足在哪里？怎么判断垂直？';
+      log.appendChild(h); return;
+    }
+    ASK_LOG.forEach(m => askAppend(host, m));
+    log.scrollTop = log.scrollHeight;
+  }
+  function askBusy(host, on) {
+    const b = host.querySelector('#askBtn'), i = host.querySelector('#askIn'),
+          f = host.querySelector('#askFoot');
+    if (b) { b.disabled = !!on; b.textContent = on ? '思考中…' : '提问'; }
+    if (i) i.disabled = !!on;
+    if (f) f.textContent = on ? '正在回答…' : ASK_FOOT;
+  }
+  async function askQuestion(host, q) {
+    q = (q || '').trim(); if (!q) return;
+    const inp = host.querySelector('#askIn'); if (inp) inp.value = '';
+    ASK_LOG.push({ role: 'q', text: q });
+    ASK_LOG.push({ role: 'a', text: '……', cls: 'wait' });
+    askRepaint(host); askBusy(host, true);
+    let res = null;
+    try {
+      const ctl = new AbortController();
+      const to = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch('api/ask', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: q }), signal: ctl.signal
+      });
+      clearTimeout(to);
+      res = await r.json();
+    } catch (_) { res = null; }
+    ASK_LOG.pop();
+    let cls, text, src;
+    if (res && res.ok) {
+      cls = res.scope === 'out' ? 'out' : 'in';
+      text = res.answer; src = 'DeepSeek · 在线';
+    } else {
+      const a = askLocal(q);
+      cls = (a === ASK_REFUSAL) ? 'out' : 'in';
+      text = a; src = '本课知识卡 · 离线';
+    }
+    ASK_LOG.push({ role: 'a', text: text, cls: cls });
+    const tag = host.querySelector('#askSrc'); if (tag) tag.textContent = src;
+    askRepaint(host); askBusy(host, false);
+    const i2 = host.querySelector('#askIn'); if (i2) { try { i2.focus(); } catch (_) { } }
+  }
+  function askInit(host) {
+    const input = host.querySelector('#askIn'), send = host.querySelector('#askBtn');
+    if (!input) return;
+    askRepaint(host);
+    if (send) send.onclick = ev => { ev.stopPropagation(); askQuestion(host, input.value); };
+    input.addEventListener('keydown', ev => {
+      ev.stopPropagation();
+      if (ev.key === 'Enter') { ev.preventDefault(); askQuestion(host, input.value); }
+    });
+    input.addEventListener('click', ev => ev.stopPropagation());
+    host.querySelectorAll('.askchip').forEach(c => {
+      c.onclick = ev => { ev.stopPropagation(); askQuestion(host, c.dataset.q); };
+    });
+  }
+
   /* ---------- 卡片 ---------- */
   function openCard(s) {
     const c = C[cur.id]; if (!c) return;
@@ -117,11 +228,13 @@
               <span class="n">${b.n || '·'}</span><span>${b.t}</span></div>`).join('')}
           ${c.slot ? `<div class="col wide slot">拖入学生作品照片 / 直接投影</div>` : ''}
         </div>
-        <div class="foot"><span>${c.foot || ''}</span><span id="stepInfo"></span></div>`;
+        <div class="foot"><span>${c.foot || ''}</span><span id="stepInfo"></span></div>
+        ${c.ask ? askHTML() : ''}`;
       cardEl.className = 'cardbar';
     }
     cardEl.hidden = false;
     renderStep();
+    if (c.ask) askInit(cardEl);
     if (c.timer) startTimer(c.timer);
   }
 
