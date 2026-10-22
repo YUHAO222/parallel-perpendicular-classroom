@@ -21,7 +21,7 @@ window.NODES = [
   { id: "p21", page: 21, seg: 4, title: "小结：垂直与方向无关", type: "card", video: "", say: ["垂直与方向无关", "垂直小结"] },
   { id: "p22", page: 22, seg: 5, title: "第一题：平行还是垂直", type: "quiz", video: "videos/p22_plate.mp4", quiz: "q22", say: ["第一题", "基础题"] },
   { id: "p23", page: 23, seg: 5, title: "第一题的答案", type: "activity", video: "videos/p23_fix.mp4", say: ["第一题答案", "点评一下"], slot: true },
-  { id: "p24", page: 24, seg: 5, title: "第二题：判断对错", type: "quiz", video: "videos/p24_plate.mp4", quiz: "q24", say: ["第二题", "判断题"] },
+  { id: "p24", page: 24, seg: 5, title: "第二题：判断对错", type: "clip", video: "videos/p24_plate.mp4", say: ["第二题", "判断题"] },
   { id: "p24a", page: 24, seg: 5, title: "判断 1：不相交就是平行吗", type: "quiz", video: "", quiz: "q24a", say: ["第一小题", "判断第一题"] },
   { id: "p24b", page: 24, seg: 5, title: "判断 2：相交成直角", type: "quiz", video: "", quiz: "q24b", say: ["第二小题", "判断第二题"] },
   { id: "p24c", page: 24, seg: 5, title: "判断 3：交点叫垂足吗", type: "quiz", video: "", quiz: "q24c", say: ["第三小题", "判断第三题"] },
