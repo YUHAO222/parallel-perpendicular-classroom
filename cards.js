@@ -156,7 +156,7 @@ window.CARDS = {
     foot: "点击逐条揭示"
   },
   p28: {
-    title: "老师寄语", tag: "环节六", steps: 0,
+    title: "老师寄语", tag: "环节六 · 课堂助教", steps: 0, ask: true,
     blocks: [
       { n: "1", t: "愿大家如平行线，同向奔赴，不负时光；", step: 0, wide: true },
       { n: "2", t: "若遇阻隔，架起垂直的桥梁，携手相伴，温暖同行。", step: 0, wide: true },
