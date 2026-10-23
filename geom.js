@@ -55,26 +55,21 @@
 
   function drawCubeSkew(t) {
     const W = cv.width, H = cv.height, dpr = W / cv.clientWidth;
+    /* 特效档位：0.35 = 在原版基础上把发光/流光/光柱压下去，几何结构不删 */
+    const FX = 0.35;
     const yaw = Math.PI / 180 * (24 + 1.84 * t), pitch = Math.PI / 180 * 18;
     const P = proj3(yaw, pitch, W, H);
     const pulse = 0.72 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2 * Math.PI / 2.2));
-    // 底座
+    // 底座（弱化：填充更淡、描边更细）
     const base = ring(P, 1.12, -1.78, 64);
-    path(base, true); ctx.fillStyle = 'rgba(90,215,245,.24)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(180,246,255,.9)'; ctx.lineWidth = 3 * dpr; ctx.stroke();
-    // 光柱
-    for (const [bx, by] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-      const a = P([bx * 1.04, by * 1.04, -1.78]), b = P([bx, by, -1.0]);
-      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
-      ctx.strokeStyle = 'rgba(120,235,255,.22)'; ctx.lineWidth = 12 * dpr; ctx.stroke();
-      ctx.strokeStyle = 'rgba(200,250,255,.5)'; ctx.lineWidth = 3 * dpr; ctx.stroke();
-    }
-    // 波纹
-    for (let i = 0; i < 3; i++) {
-      const ph = ((t / 2.8) + i / 3) % 1, rad = 1.15 + 0.9 * ph;
+    path(base, true); ctx.fillStyle = 'rgba(90,215,245,.12)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(180,246,255,.5)'; ctx.lineWidth = 2 * dpr; ctx.stroke();
+    // 波纹：3 条 → 2 条，透明度减半
+    for (let i = 0; i < 2; i++) {
+      const ph = ((t / 3.2) + i / 2) % 1, rad = 1.15 + 0.9 * ph;
       path(ring(P, rad, -1.78, 64), true);
-      ctx.strokeStyle = `rgba(170,245,255,${0.85 * (1 - ph) * pulse})`;
-      ctx.lineWidth = (4.4 - 2 * ph) * dpr; ctx.stroke();
+      ctx.strokeStyle = `rgba(170,245,255,${0.42 * (1 - ph) * pulse})`;
+      ctx.lineWidth = (3 - 1.6 * ph) * dpr; ctx.stroke();
     }
     // 面
     const front = new Set();
@@ -84,46 +79,40 @@
       if (area < 0) {
         front.add(name);
         path(xy, true);
-        ctx.fillStyle = name === 'top' ? 'rgba(255,196,88,.30)' : 'rgba(34,140,175,.30)'; ctx.fill();
+        ctx.fillStyle = name === 'top' ? 'rgba(255,196,88,.18)' : 'rgba(34,140,175,.18)'; ctx.fill();
       }
     }
     const vis = e => { const [a, b] = e; for (const n of front) { const f = FACES[n]; if (f.some(p => p.join() === a.join()) && f.some(p => p.join() === b.join())) return true; } return false; };
     // 背棱
     ctx.setLineDash([6 * dpr, 8 * dpr]);
-    for (const e of EDGES) { if (vis(e)) continue; const a = P(e[0]), b = P(e[1]); path([a, b]); ctx.strokeStyle = 'rgba(150,220,250,.42)'; ctx.lineWidth = 2 * dpr; ctx.stroke(); }
+    for (const e of EDGES) { if (vis(e)) continue; const a = P(e[0]), b = P(e[1]); path([a, b]); ctx.strokeStyle = 'rgba(150,220,250,.3)'; ctx.lineWidth = 2 * dpr; ctx.stroke(); }
     ctx.setLineDash([]);
-    // 可见棱
-    ctx.save(); ctx.shadowColor = 'rgba(110,232,255,.9)'; ctx.shadowBlur = 14 * dpr;
+    // 可见棱：去掉外发光，三层改两层
     for (const e of EDGES) {
       if (!vis(e)) continue; const a = P(e[0]), b = P(e[1]);
-      path([a, b]); ctx.strokeStyle = 'rgba(110,232,255,.5)'; ctx.lineWidth = 10 * dpr; ctx.stroke();
-      ctx.strokeStyle = 'rgba(198,240,255,1)'; ctx.lineWidth = 3.4 * dpr; ctx.stroke();
-      ctx.strokeStyle = '#f0fdff'; ctx.lineWidth = 1.3 * dpr; ctx.stroke();
+      path([a, b]); ctx.strokeStyle = 'rgba(110,232,255,.30)'; ctx.lineWidth = 6 * dpr; ctx.stroke();
+      ctx.strokeStyle = 'rgba(198,240,255,.92)'; ctx.lineWidth = 2.2 * dpr; ctx.stroke();
     }
-    ctx.restore();
-    // 流光
+    // 流光：细一点、不画光点
     for (let i = 0; i < EDGES.length; i++) {
       const e = EDGES[i]; if (!vis(e)) continue;
-      const a = P(e[0]), b = P(e[1]), ph = ((t / 1.7) + i * 0.137) % 1;
-      const u0 = Math.max(0, ph - 0.26), u1 = Math.min(1, ph + 0.16);
+      const a = P(e[0]), b = P(e[1]), ph = ((t / 2.4) + i * 0.137) % 1;
+      const u0 = Math.max(0, ph - 0.22), u1 = Math.min(1, ph + 0.14);
       path([[a[0] + (b[0] - a[0]) * u0, a[1] + (b[1] - a[1]) * u0], [a[0] + (b[0] - a[0]) * u1, a[1] + (b[1] - a[1]) * u1]]);
-      ctx.strokeStyle = 'rgba(255,224,150,.95)'; ctx.lineWidth = 6 * dpr; ctx.stroke();
-      ctx.beginPath(); ctx.arc(a[0] + (b[0] - a[0]) * u1, a[1] + (b[1] - a[1]) * u1, 4 * dpr, 0, 7); ctx.fillStyle = '#fffbe0'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,224,150,.55)'; ctx.lineWidth = 3 * dpr; ctx.stroke();
     }
-    // 顶点
+    // 顶点：小一点、无发光
     for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) {
       const [px, py] = P([x, y, z]);
-      ctx.save(); ctx.shadowColor = 'rgba(110,232,255,1)'; ctx.shadowBlur = 12 * dpr;
-      ctx.beginPath(); ctx.arc(px, py, 3.6 * dpr, 0, 7); ctx.fillStyle = '#f0fdff'; ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.arc(px, py, 2.4 * dpr, 0, 7); ctx.fillStyle = 'rgba(240,253,255,.85)'; ctx.fill();
     }
-    // 金环
-    for (let i = 0; i < 3; i++) {
-      const ph = t * 2.4 + i * 2 * Math.PI / 3;
+    // 金环：3 条 → 2 条，无发光
+    for (let i = 0; i < 2; i++) {
+      const ph = t * 2.4 + i * Math.PI;
       const pts = ring(P, 1.78, 0, 96, ph, Math.PI / 1.9);
-      ctx.save(); ctx.shadowColor = 'rgba(255,200,90,.9)'; ctx.shadowBlur = 12 * dpr;
-      path(pts); ctx.strokeStyle = 'rgba(255,214,130,.9)'; ctx.lineWidth = 4.4 * dpr; ctx.stroke(); ctx.restore();
+      path(pts); ctx.strokeStyle = 'rgba(255,214,130,.5)'; ctx.lineWidth = 2.6 * dpr; ctx.stroke();
     }
-    // 两条线
+    // 两条线（标记线保留，只把发光压低）
     const line3 = (p0, p1, col, inside, w) => {
       const a = P(p0), b = P(p1), N = 140;
       for (let i = 0; i < N; i++) {
@@ -131,13 +120,13 @@
         const x0 = a[0] + (b[0] - a[0]) * t0i, y0 = a[1] + (b[1] - a[1]) * t0i;
         const x1 = a[0] + (b[0] - a[0]) * t1i, y1 = a[1] + (b[1] - a[1]) * t1i;
         path([[x0, y0], [x1, y1]]);
-        if (inside((t0i + t1i) / 2)) { ctx.strokeStyle = col; ctx.lineWidth = w * dpr; ctx.shadowColor = col; ctx.shadowBlur = 12 * dpr; }
-        else { ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = (w - 2) * dpr; ctx.shadowBlur = 0; }
+        if (inside((t0i + t1i) / 2)) { ctx.strokeStyle = col; ctx.lineWidth = w * dpr; ctx.shadowColor = col; ctx.shadowBlur = 12 * FX * dpr; }
+        else { ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = (w - 2) * dpr; ctx.shadowBlur = 0; }
         ctx.stroke(); ctx.shadowBlur = 0;
       }
     };
-    line3(A0, A1, '#ffce4a', tt => { const x = A0[0] + (A1[0] - A0[0]) * tt; return x >= -1 && x <= 1; }, 6.6);
-    line3(B0, B1, '#ff60be', tt => { const z = B0[2] + (B1[2] - B0[2]) * tt; return z >= -1 && z <= 1; }, 6.6);
+    line3(A0, A1, '#ffce4a', tt => { const x = A0[0] + (A1[0] - A0[0]) * tt; return x >= -1 && x <= 1; }, 5.6);
+    line3(B0, B1, '#ff60be', tt => { const z = B0[2] + (B1[2] - B0[2]) * tt; return z >= -1 && z <= 1; }, 5.6);
     label(P([1.5, -1.05, 1.0]), '上表面', '#ffce4a', dpr);
     label(P([-0.15, 1.0, -1.6]), '前面', '#ff60be', dpr);
   }
