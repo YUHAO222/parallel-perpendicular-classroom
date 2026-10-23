@@ -15,7 +15,7 @@ window.CARDS = {
     hero: true, center: true, title: "直线的特点", tag: "环节一 · 认识直线", steps: 2,
     blocks: [
       { n: "1", t: "可以向<b>两端</b>无限延伸", step: 1, wide: true },
-      { n: "2", t: "两端都<b>没有端点</b>，所以画的时候要画到纸边，表示还能继续延伸", step: 2, wide: true }
+      { n: "2", t: "没有端点", step: 2, wide: true }
     ],
     foot: "点击逐条揭示"
   },
