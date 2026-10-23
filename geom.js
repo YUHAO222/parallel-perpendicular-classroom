@@ -135,32 +135,33 @@
     const W = cv.width, H = cv.height, dpr = W / cv.clientWidth;
     const yaw = Math.PI / 180 * (24 + 12 * Math.min(1, t / 9)), pitch = Math.PI / 180 * 18;
     const P = proj3(yaw, pitch, W, H);
-    drawCubeShell(P, dpr, '#ffce4a');
+    drawCubeShell(P, dpr, '#ffce4a', 0.4);      // 与原版同款，只是特效压到 0.4 档
     for (let i = 0; i < L2.length; i++) {
       const [x0, y0, z0, x1, y1, z1] = L2[i];
       const a = P([x0, y0, z0]), b = P([x1, y1, z1]);
-      ctx.save(); ctx.shadowColor = '#ffce4a'; ctx.shadowBlur = 14 * dpr;
-      path([a, b]); ctx.strokeStyle = '#ffce4a'; ctx.lineWidth = 6.6 * dpr; ctx.stroke(); ctx.restore();
-      const ph = ((t / 1.6) + i * 0.5) % 1, u0 = Math.max(0, ph - 0.22), u1 = Math.min(1, ph + 0.22);
+      ctx.save(); ctx.shadowColor = '#ffce4a'; ctx.shadowBlur = 5 * dpr;
+      path([a, b]); ctx.strokeStyle = '#ffce4a'; ctx.lineWidth = 5.4 * dpr; ctx.stroke(); ctx.restore();
+      const ph = ((t / 2.0) + i * 0.5) % 1, u0 = Math.max(0, ph - 0.2), u1 = Math.min(1, ph + 0.2);
       path([[a[0] + (b[0] - a[0]) * u0, a[1] + (b[1] - a[1]) * u0], [a[0] + (b[0] - a[0]) * u1, a[1] + (b[1] - a[1]) * u1]]);
-      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 6 * dpr; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3 * dpr; ctx.stroke();
     }
     label(P([0.55, -1.30, 1.0]), '同一平面', '#ffce4a', dpr);
   }
 
-  function drawCubeShell(P, dpr, gold) {
+  function drawCubeShell(P, dpr, gold, fx) {
+    const F = fx == null ? 1 : fx;
     const W = cv.width, H = cv.height;
     const base = ring(P, 1.12, -1.78, 64);
-    path(base, true); ctx.fillStyle = 'rgba(90,215,245,.22)'; ctx.fill();
+    path(base, true); ctx.fillStyle = 'rgba(90,215,245,' + (0.12 + 0.10 * F).toFixed(2) + ')'; ctx.fill();
     for (const [bx, by] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
       const a = P([bx * 1.04, by * 1.04, -1.78]), b = P([bx, by, -1.0]);
-      path([a, b]); ctx.strokeStyle = 'rgba(120,235,255,.2)'; ctx.lineWidth = 10 * dpr; ctx.stroke();
+      path([a, b]); ctx.strokeStyle = 'rgba(120,235,255,' + (0.10 + 0.10 * F).toFixed(2) + ')'; ctx.lineWidth = (4 + 6 * F) * dpr; ctx.stroke();
     }
     const front = new Set();
     for (const name in FACES) {
       const xy = FACES[name].map(P); let area = 0;
       for (let i = 0; i < 4; i++) { const a = xy[i], b = xy[(i + 1) % 4]; area += a[0] * b[1] - b[0] * a[1]; }
-      if (area < 0) { front.add(name); path(xy, true); ctx.fillStyle = name === 'top' ? 'rgba(255,196,88,.26)' : 'rgba(34,140,175,.24)'; ctx.fill(); }
+      if (area < 0) { front.add(name); path(xy, true); ctx.fillStyle = name === 'top' ? 'rgba(255,196,88,' + (0.14 + 0.12 * F).toFixed(2) + ')' : 'rgba(34,140,175,' + (0.12 + 0.12 * F).toFixed(2) + ')'; ctx.fill(); }
     }
     const vis = e => { const [a, b] = e; for (const n of front) { const f = FACES[n]; if (f.some(p => p.join() === a.join()) && f.some(p => p.join() === b.join())) return true; } return false; };
     ctx.setLineDash([5 * dpr, 7 * dpr]);
@@ -168,8 +169,8 @@
     ctx.setLineDash([]);
     for (const e of EDGES) {
       if (!vis(e)) continue; const a = P(e[0]), b = P(e[1]);
-      path([a, b]); ctx.strokeStyle = 'rgba(120,232,255,.85)'; ctx.lineWidth = 4.4 * dpr; ctx.stroke();
-      ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 1.4 * dpr; ctx.stroke();
+      path([a, b]); ctx.strokeStyle = 'rgba(120,232,255,.8)'; ctx.lineWidth = (2.6 + 1.8 * F) * dpr; ctx.stroke();
+      ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 1.2 * dpr; ctx.stroke();
     }
   }
 
