@@ -12,7 +12,7 @@ window.NODES = [
   { id: "p09", page: 9, seg: 2, title: "①—⑧ 八组图形分类", type: "quiz", video: "videos/A_ask_plate.mp4", quiz: "q09", say: ["分一分", "八组图形分类"] },
   { id: "p10", page: 10, seg: 2, title: "分类结果", type: "card", video: "", say: ["看结果", "哪些相交哪些不相交"], steps: 23 },
   { id: "p12", page: 12, seg: 3, title: "平行线的定义", type: "card", video: "videos/3-3_wk_probe_premise.mp4", say: ["什么是平行线", "平行线的定义"] },
-  { id: "p13", page: 13, seg: 3, title: "立方体：两个不同的面", type: "clip", video: "videos/p13_clean.mp4", say: ["看立方体", "两个不同的面"] },
+  { id: "p13", page: 13, seg: 3, title: "立方体：两个不同的面", type: "clip", video: "videos/p13_v2.mp4", geom: "cubeSkew", say: ["看立方体", "两个不同的面"] },
   { id: "p14", page: 14, seg: 3, title: "立方体：同一个面", type: "clip", video: "videos/p14_clean.mp4", say: ["同一个面", "这才是平行线"] },
   { id: "p17", page: 17, seg: 3, title: "本段知识点", type: "card", video: "", say: ["本段知识点", "梳理一下"] },
   { id: "p18", page: 18, seg: 4, title: "旋转到 90° 成直角", type: "clip", video: "videos/p18_geom.mp4", say: ["转成直角", "演示垂直"] },
