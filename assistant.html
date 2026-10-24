@@ -56,6 +56,7 @@
   <button id="send" type="submit">问一问</button>
 </form>
 
+<script src="kb.js?v=20261024t"></script>
 <script>
 /* ---------- 本地知识库：不依赖网络，课后直接可用 ---------- */
 const KB = [
@@ -92,14 +93,21 @@ function add(cls, html) {
 
 function answer(text) {
   const t = (text || '').replace(/\s/g, '');
+  // ① 先查《智能体回复》38 条标准答复
+  if (typeof ASK_MATCH === 'function') {
+    const h = ASK_MATCH(t);
+    if (h) { window.__kp = h.entry.kp; return h.entry.a; }
+  }
+  window.__kp = '';
   let hit = null;
   for (const item of KB) {
     if (item.k.some(k => t.includes(k))) { hit = item; break; }
   }
   if (hit) return hit.a;
-  if (/你好|在吗|嗨/.test(t)) return '俺老孙在！想问平行、垂直还是垂足？';
-  if (/谢谢|谢了/.test(t)) return '不客气！课后还想到什么问题，随时来问俺老孙。';
-  return '这个俺老孙还没学会讲清楚 🤔 你试试问：<b>什么是垂足</b>、<b>不相交一定平行吗</b>、<b>同一平面内两条直线有几种关系</b>。';
+  if (/你好|在吗|嗨/.test(t)) return '俺老猪在！想问平行、垂直还是垂足？';
+  if (/你叫什么|你是谁|名字/.test(t)) return '俺老猪是《平行与垂直》这节课的课堂助教，课前课后的疑问都能问我。';
+  if (/谢谢|谢了/.test(t)) return '不客气！课后还想到什么问题，随时来问俺老猪。';
+  return '这个俺老猪不答——只讲《平行与垂直》这节课的。你试试问：<b>什么是垂足</b>、<b>不相交一定平行吗</b>、<b>同一平面内两条直线有几种关系</b>。';
 }
 
 let busy = false;
