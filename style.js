@@ -219,7 +219,7 @@
       cardEl.innerHTML = `
         <div class="tag">${c.tag || ''}</div>
         <h2>${c.title}</h2>
-        ${c.blocks.map(b => `<div class="line${b.sub ? ' sub' : ''}" data-step="${b.step || 0}">${b.t}</div>`).join('')}
+        ${c.blocks.map(b => `<div class="line${b.sub ? ' subline' : ''}" data-step="${b.step || 0}">${b.t}</div>`).join('')}
         ${c.cta ? `<a class="cta" href="${c.cta.href}" target="_blank" rel="noopener">${c.cta.label}</a>` : ''}
         ${c.ask ? askHTML() : ''}
         <div class="foot">${c.foot || ''}<span id="stepInfo"></span></div>`;

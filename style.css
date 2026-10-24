@@ -209,4 +209,6 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
 .hero .askchip:hover{background:rgba(143,227,176,.22)}
 .hero .askfoot{margin-top:7px;font-size:11px;color:#8fa3bd}
 /* 总结页二级条目缩进 */
-.hero .line.sub{padding-left:2.4em;font-size:.92em;opacity:.95;}
+.hero .line.subline{padding-left:2.4em;line-height:1.9;opacity:.96;}
+.hero.center .line.subline{font-size:21px;text-align:left;}
+.hero .line.subline b{font-weight:700;}
