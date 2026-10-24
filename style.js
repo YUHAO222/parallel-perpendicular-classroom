@@ -646,6 +646,11 @@
 
   document.getElementById('stage').addEventListener('click', e => {
     if (e.target.closest('button,#card,#quiz,.nav,.topbar,.micbox')) return;
+    if (tapEl && !tapEl.hidden) {          // 遮罩在时：点画面 = 播这一页，不是翻页
+      hideTap(); const pp = v.play(); if (pp && pp.catch) pp.catch(() => {});
+      setTimeout(() => { if (v.paused && !v.ended) { showTap(); showHint('还没开始播放，再点一下 ▶'); } }, 1200);
+      return;
+    }
     if (cur && cur.video && !v.paused && !v.ended) { v.pause(); return; } // 播放中点击=暂停
     next();
   });
