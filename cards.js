@@ -156,10 +156,17 @@ window.CARDS = {
     foot: "点击逐条揭示"
   },
   p28: {
-    hero: true, center: true, big: true, ask: false, title: "结语", tag: "本课小结", steps: 1,
+    hero: true, center: true, title: "老师寄语", tag: "环节六 · 总结", steps: 0,
     blocks: [
-      { t: "平行不相交，垂直成直角——都别忘了<b>「同一平面内」</b>。", step: 0, wide: true },
-      { t: "愿大家如平行线，<b>同向奔赴，不负时光</b>。", step: 0, wide: true }
+      { n: "1", t: "愿大家如<b>平行线</b>，同向奔赴，不负时光；", step: 0, wide: true },
+      { n: "2", t: "若遇阻隔，架起<b>垂直</b>的桥梁，携手相伴，温暖同行。", step: 0, wide: true },
+      { n: "作", t: "回顾六环节结论，完成课后作业", step: 0, wide: true }
+    ]
+  },
+  p29: {
+    hero: true, center: true, big: true, steps: 0, title: "课后答疑", tag: "环节六 · 总结",
+    blocks: [
+      { t: "有问题找助教，点下面按钮，<b>八戒助教</b>来助你一臂之力", step: 0, wide: true }
     ],
     cta: { label: "打开课堂助教 ▶", href: "assistant.html" }
   }
