@@ -167,7 +167,20 @@
     [/一条|单独/, '平行与垂直都是两条直线之间的关系，不能说一条直线“互相平行”。'],
     [/垂直|直角/, '两条直线相交成直角，就说这两条直线互相垂直，交点叫垂足；判断时先看是否相交，再看角是不是直角。']
   ];
-  function askLocal(q) { for (const it of ASK_KB) if (it[0].test(q)) return it[1]; return ASK_REFUSAL; }
+  let ASK_HIT = null;
+  function askLocal(q) {
+    ASK_HIT = null;
+    if (/区别|不同|不一样|差别/.test(q) && /平行/.test(q) && /垂直/.test(q)) {
+      return '平行是同一平面内不相交的两条直线，记作 a∥b；垂直是两条直线相交成直角，记作 a⊥b，交点叫垂足。' +
+             '平行一定不相交，垂直一定相交成直角——这就是它们最根本的区别。';
+    }
+    if (typeof ASK_MATCH === 'function') {              // ① 38 条标准答复（kb.js）
+      const h = ASK_MATCH(q);
+      if (h) { ASK_HIT = h.entry; return h.entry.a; }
+    }
+    for (const it of ASK_KB) if (it[0].test(q)) return it[1];   // ② 兜底短语
+    return ASK_REFUSAL;
+  }
 
   const askHTML = () => `
     <div class="ask">
@@ -239,7 +252,8 @@
     } else {
       const a = askLocal(q);
       cls = (a === ASK_REFUSAL) ? 'out' : 'in';
-      text = a; src = '本课知识卡 · 离线';
+      text = a;
+      src = cls === 'out' ? '本课范围 · 课外不答' : (ASK_HIT ? ('标准答复 · ' + ASK_HIT.kp) : '本课知识卡 · 离线');
     }
     ASK_LOG.push({ role: 'a', text: text, cls: cls });
     ASK_SRC = src;
