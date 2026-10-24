@@ -236,3 +236,6 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
 .askrow #askMic.live{background:rgba(255,90,90,.3);border-color:#ff8a8a;color:#fff;
   animation:micPulse 1s ease-in-out infinite}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,.5)}50%{box-shadow:0 0 0 8px rgba(255,90,90,0)}}
+
+/* 语音识别提示为空时不要留一个空胶囊 */
+.heard:empty{display:none}
