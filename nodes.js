@@ -30,7 +30,10 @@ window.NODES = [
   { id: "p24d", page: 24, seg: 5, title: "判断 4：不平行就相交", type: "quiz", video: "", quiz: "q24d", say: ["第四小题", "判断第四题"] },
   { id: "p26", page: 26, seg: 6, title: "知识导图", type: "card", cardEarly: true, video: "videos/p26_clean.mp4", say: ["总结", "知识梳理"] },
   { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/p27_life.mp4", say: ["生活中的例子", "举例子"] },
-  { id: "p28", page: 28, seg: 6, title: "结语 · 课堂助教", type: "card", video: "", cleanBg: true, say: ["结语", "有问题找八戒助教", "下课"] }
+  { id: "p28", page: 28, seg: 6, title: "老师寄语", type: "card", video: "", cleanBg: true, geom: "parallel",
+    say: ["老师寄语", "愿大家如平行线", "同向奔赴，不负时光"] },
+  { id: "p29", page: 29, seg: 6, title: "课后答疑", type: "card", video: "", cleanBg: true,
+    say: ["有问题找助教", "点下面按钮", "八戒助教来助你一臂之力"] }
 ];
 
 window.SEG_NAME = { 1: "环节一 · 情境导入", 2: "环节二 · 相交与不相交", 3: "环节三 · 平行", 4: "环节四 · 垂直", 5: "环节五 · 分层练习", 6: "环节六 · 总结" };
