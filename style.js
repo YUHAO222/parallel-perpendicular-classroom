@@ -106,6 +106,8 @@
 
     if (cur.quiz) renderQuiz(cur.quiz);      // 题板与出题动画同时出现
     if (cur.cardEarly) setTimeout(() => { if (cur && cur.cardEarly && cardEl.hidden) openCard(1); }, 300);
+    document.getElementById('stage').classList.toggle('cleanbg', !!cur.cleanBg);
+    if (cur.cleanBg) v.classList.add('hidden');
     if (cur.video) {
       v.classList.remove('hidden');
       v.src = cur.video; v.currentTime = 0;
@@ -115,8 +117,8 @@
       showHint('播放中…');
       hideTap(); armTap();
     } else {
-      // 无视频的页：保留上一页的末帧作背景，不切成黑屏
-      try { v.pause(); } catch (_) {}
+      // 无视频的页：保留上一页的末帧作背景（标了 cleanBg 的页则用干净底色，不留人物画面）
+      if (!cur.cleanBg) { try { v.pause(); } catch (_) {} }
       setTimeout(onEnded, 80);
     }
   }
