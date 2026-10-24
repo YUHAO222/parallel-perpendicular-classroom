@@ -171,7 +171,7 @@
 
   const askHTML = () => `
     <div class="ask">
-      <div class="askhd"><img class="askava" src="assets/bajie_tutor.png" alt="猪八戒"><span class="askwho">猪八戒 · 课堂助教</span><span class="tagx" id="askSrc">${ASK_SRC}</span></div>
+      <div class="askhd"><img class="askava" src="assets/bajie_tutor.png?v=20261024n" alt="猪八戒"><span class="askwho">猪八戒 · 课堂助教</span><span class="tagx" id="askSrc">${ASK_SRC}</span></div>
       <div class="asklog" id="askLog"></div>
       <div class="askrow">
         <input id="askIn" type="text" maxlength="120" autocomplete="off"
