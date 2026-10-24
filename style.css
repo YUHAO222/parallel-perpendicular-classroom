@@ -239,3 +239,7 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
 
 /* 语音识别提示为空时不要留一个空胶囊 */
 .heard:empty{display:none}
+
+/* 结语页：不留上一页人物画面，用干净底色 */
+#stage.cleanbg{background:radial-gradient(125% 125% at 50% 0%, #16253f 0%, #0b1526 55%, #060a12 100%)}
+#stage.cleanbg video{visibility:hidden}
