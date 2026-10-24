@@ -141,8 +141,8 @@ window.CARDS = {
       { n: "", t: "定义：在同一个平面内不相交的两条直线叫做平行线，", step: 0, wide: true },
       { n: "", t: "也可以说这两条直线互相平行。", step: 0, wide: true },
       { n: "", t: "<b>2 相交</b>", step: 0, wide: true },
-      { n: "", t: "① 普通相交（夹角不是直角）", step: 0, wide: true },
-      { n: "", t: "② 特殊相交：垂直 —— 交点叫垂足", step: 0, wide: true }
+      { n: "", t: "一般相交（夹角不是直角）", step: 0, wide: true, sub: true },
+      { n: "", t: "特殊情况：垂直 —— 垂足", step: 0, wide: true, sub: true }
     ],
     foot: "点击继续"
   },
@@ -156,12 +156,12 @@ window.CARDS = {
     foot: "点击逐条揭示"
   },
   p28: {
-    title: "老师寄语", tag: "环节六 · 课堂助教", steps: 0, ask: true,
+    hero: true, center: true, big: true, ask: true, title: "课堂助教", tag: "课前课后 · 随时问", steps: 1,
     blocks: [
-      { n: "1", t: "愿大家如平行线，同向奔赴，不负时光；", step: 0, wide: true },
-      { n: "2", t: "若遇阻隔，架起垂直的桥梁，携手相伴，温暖同行。", step: 0, wide: true },
-      { n: "作", t: "回顾六环节结论，完成课后作业", step: 0 }
+      { t: "课前课后有问题，就问<b>猪八戒助教</b>", step: 0, wide: true },
+      { t: "什么是垂足？不相交一定平行吗？打开就能问。", step: 0, wide: true }
     ],
-    foot: "下课"
+    cta: { label: "打开助教大页 ▶", href: "assistant.html" },
+    foot: "也可以直接对课堂说：「八戒，什么是垂足？」"
   }
 };
