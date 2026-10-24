@@ -170,7 +170,8 @@
       <div class="asklog" id="askLog"></div>
       <div class="askrow">
         <input id="askIn" type="text" maxlength="120" autocomplete="off"
-               placeholder="输入问题，按回车发送（例：垂足在哪里？）">
+               placeholder="打字问，或按 🎤 说话问（例：垂足在哪里？）">
+        <button id="askMic" type="button" title="按一下说话提问">🎤</button>
         <button id="askBtn" type="button">提问</button>
       </div>
       <div class="askchips">${ASK_TIPS.map(t => `<span class="askchip" data-q="${t}">${t}</span>`).join('')}</div>
@@ -241,11 +242,44 @@
     askRepaint(host); askBusy(host, false);
     const i2 = host.querySelector('#askIn'); if (i2) { try { i2.focus(); } catch (_) { } }
   }
+  /* ---------- 课堂助教：语音提问（Web Speech，说完自动发送） ---------- */
+  let askRecog = null;
+  function askListen(host) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btn = host.querySelector('#askMic'), inp = host.querySelector('#askIn');
+    if (!SR) { showHint('这个浏览器不支持语音识别：请用 Chrome / Edge'); return; }
+    if (askRecog) { try { askRecog.stop(); } catch (_) {} askRecog = null; }
+    const r = new SR();
+    askRecog = r;
+    r.lang = 'zh-CN'; r.continuous = false; r.interimResults = true; r.maxAlternatives = 3;
+    if (btn) btn.classList.add('live');
+    showHint('🎤 正在听…说完自动提问');
+    r.onresult = e => {
+      let fin = '', itm = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const s = e.results[i][0].transcript;
+        if (e.results[i].isFinal) fin += s; else itm += s;
+      }
+      if (inp) inp.value = (fin || itm).trim();
+      if (fin.trim()) { try { r.stop(); } catch (_) {} askQuestion(host, fin.trim()); }
+    };
+    r.onerror = ev => {
+      if (btn) btn.classList.remove('live');
+      const k = ev && ev.error;
+      showHint(k === 'not-allowed' || k === 'service-not-allowed'
+        ? '麦克风没授权：点地址栏左侧小锁 → 允许麦克风' : '没听清，按 🎤 再说一次');
+    };
+    r.onend = () => { if (btn) btn.classList.remove('live'); if (askRecog === r) askRecog = null; };
+    try { r.start(); } catch (_) { if (btn) btn.classList.remove('live'); }
+  }
+
   function askInit(host) {
     const input = host.querySelector('#askIn'), send = host.querySelector('#askBtn');
     if (!input) return;
     askRepaint(host);
     if (send) send.onclick = ev => { ev.stopPropagation(); askQuestion(host, input.value); };
+    const mic = host.querySelector('#askMic');
+    if (mic) mic.onclick = ev => { ev.stopPropagation(); askListen(host); };
     input.addEventListener('keydown', ev => {
       ev.stopPropagation();
       if (ev.key === 'Enter') { ev.preventDefault(); askQuestion(host, input.value); }
@@ -550,6 +584,12 @@
     clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 3200);
   }
   function norm(s) { return (s || '').replace(/[\s，。！？、,.!?「」“”"']/g, ''); }
+  function askOpen() {
+    return !!(cur && cur.id === 'p28' && !cardEl.hidden && cardEl.querySelector('#askIn'));
+  }
+  function looksLikeQuestion(t) {
+    return /[？?]|什么|怎么|为什么|咋|哪个|哪些|是不是|能不能|可不可以|多少|如何|请问|告诉我|解释|讲讲|说说|区别|一样吗/.test(t);
+  }
   function handleText(text) {
     if (!text) return;
     heard.hidden = false;
@@ -598,6 +638,11 @@
       [/^(转起来|继续转)$/, () => { spin = true; GEO.setSpin(true); }]
     ];
     for (const [re, fn] of map) if (re.test(t)) { fn(); heard.innerHTML += `<span class="hit">→ ${re.source.slice(2, 8)}…</span>`; return; }
+    // —— 最后一页：像提问的话先交给课堂助教（不然「什么是平行线」会被页面口令抢走） ——
+    if (askOpen() && looksLikeQuestion(t)) {
+      const host = document.getElementById('card');
+      if (host) { heard.innerHTML += '<span class="hit">→ 问猪八戒</span>'; askQuestion(host, text.trim()); return; }
+    }
     // 页面口令（取最长命中）
     let best = null, bestLen = 0;
     N.forEach(n => (n.say || []).forEach(s => { const k = norm(s); if (k && t.includes(k) && k.length > bestLen) { best = n; bestLen = k.length; } }));
