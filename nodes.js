@@ -27,7 +27,7 @@ window.NODES = [
   { id: "p24c", page: 24, seg: 5, title: "判断 3：交点叫垂足吗", type: "quiz", video: "", quiz: "q24c", say: ["第三小题", "判断第三题"] },
   { id: "p24d", page: 24, seg: 5, title: "判断 4：不平行就相交", type: "quiz", video: "", quiz: "q24d", say: ["第四小题", "判断第四题"] },
   { id: "p26", page: 26, seg: 6, title: "知识导图", type: "card", cardEarly: true, video: "videos/p26_clean.mp4", say: ["总结", "知识梳理"] },
-  { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/5-12_wk_life_examples.mp4", say: ["生活中的例子", "举例子"] },
+  { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/p27_life.mp4", say: ["生活中的例子", "举例子"] },
   { id: "p28", page: 28, seg: 6, title: "课堂助教", type: "card", video: "", say: ["课堂助教", "课后继续问", "下课"] }
 ];
 
