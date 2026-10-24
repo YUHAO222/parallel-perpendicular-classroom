@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>课堂助教 · 悟空</title>
+<style>
+  :root{ --ink:#eaf2ff; --dim:#9fb2cc; --gold:#ffd166; --line:rgba(120,170,255,.22); }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:radial-gradient(1200px 700px at 25% 0%,#152a4a 0%,#080e1a 55%,#04060d 100%);
+       color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+       display:flex;flex-direction:column;overflow:hidden}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  .face{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+        font-size:30px;background:linear-gradient(160deg,#f7c86a,#e08a1e);box-shadow:0 8px 22px rgba(0,0,0,.45)}
+  .name{font-size:clamp(20px,2vw,28px);font-weight:800;letter-spacing:1px;color:#ffe6a6}
+  .name small{display:block;font-size:13px;font-weight:400;letter-spacing:0;color:var(--dim);margin-top:2px}
+  header a{margin-left:auto;color:#cfe0f5;text-decoration:none;border:1px solid var(--line);
+           padding:8px 16px;border-radius:999px;font-size:14px}
+  header a:hover{background:rgba(120,170,255,.12)}
+  #log{flex:1;overflow:auto;padding:22px clamp(18px,4vw,64px);display:flex;flex-direction:column;gap:14px}
+  .msg{max-width:min(900px,86%);padding:16px 22px;border-radius:18px;font-size:clamp(17px,1.8vw,24px);line-height:1.7}
+  .me{align-self:flex-end;background:linear-gradient(180deg,rgba(95,184,255,.28),rgba(95,184,255,.12));
+      border:1px solid rgba(95,184,255,.45)}
+  .wk{align-self:flex-start;background:rgba(20,32,52,.92);border:1px solid var(--line)}
+  .wk b{color:var(--gold)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;padding:0 clamp(18px,4vw,64px) 10px}
+  .chips button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#dbe9ff;
+    padding:10px 18px;border-radius:999px;font-size:clamp(14px,1.3vw,18px);cursor:pointer;font-family:inherit}
+  .chips button:hover{background:rgba(255,209,102,.18);border-color:rgba(255,209,102,.5)}
+  form{display:flex;gap:12px;padding:14px clamp(18px,4vw,64px) 20px;border-top:1px solid var(--line)}
+  input{flex:1;background:rgba(10,18,32,.9);border:1px solid var(--line);border-radius:14px;
+        padding:16px 20px;color:var(--ink);font-size:clamp(16px,1.7vw,22px);font-family:inherit;outline:none}
+  input:focus{border-color:rgba(255,209,102,.6)}
+  form button{background:linear-gradient(180deg,#ffe08a,#ffb020);color:#241a05;border:none;
+    padding:0 30px;border-radius:14px;font-size:clamp(16px,1.7vw,22px);font-weight:800;cursor:pointer;font-family:inherit}
+  form button:disabled{opacity:.45;cursor:default}
+</style>
+</head>
+<body>
+<header>
+  <div class="face">🐵</div>
+  <div class="name">课堂助教 · 悟空<small>平行与垂直 · 课后随时问</small></div>
+  <a href="index.html">回到课堂 ▶</a>
+</header>
+
+<div id="log">
+  <div class="msg wk">俺老孙在这儿！课后想问什么都行 —— <b>平行、垂直、垂足、同一平面</b>，随便挑一个问我。</div>
+</div>
+
+<div class="chips" id="chips"></div>
+
+<form id="f">
+  <input id="q" placeholder="问问看：什么是垂足？不相交一定平行吗？" autocomplete="off">
+  <button id="send" type="submit">问一问</button>
+</form>
+
+<script>
+/* ---------- 本地知识库：不依赖网络，课后直接可用 ---------- */
+const KB = [
+  { k: ["垂足","交点叫"], a: "两条直线相交成<b>直角</b>时，这个交点才叫<b>垂足</b>。普通的相交，交点只叫交点，不叫垂足。" },
+  { k: ["垂直"], a: "两条直线相交成<b>直角</b>，就说这两条直线互相垂直，记作 <b>a⊥b</b>。垂直和摆放方向无关，斜着放只要成直角也算垂直。" },
+  { k: ["平行"], a: "在<b>同一个平面内</b>、<b>不相交</b>的两条直线叫平行线，记作 <b>a∥b</b>。判断平行要看两点：同一平面内 + 延长后也不相交。" },
+  { k: ["同一平面","同一个平面","异面"], a: "两条直线不在同一个平面上（比如立方体的一条在前面、一条在上面），它们不相交，但<b>不是平行线</b>，叫异面。" },
+  { k: ["不相交"], a: "不相交<b>不一定</b>平行。还要看是不是在<b>同一平面内</b>：不同平面上的两条直线也可以不相交，但那是异面。" },
+  { k: ["垂直符号","⊥"], a: "垂直记作 <b>a⊥b</b>，读作「a 垂直于 b」；平行记作 <b>a∥b</b>，读作「a 平行于 b」。" },
+  { k: ["延长","延长后"], a: "判断时要<b>延长再看</b>：有些线看着不相交，延长后就相交了，那就不是平行。" },
+  { k: ["两种关系","几种关系","位置关系"], a: "在<b>同一个平面内</b>，两条直线的位置关系只有两种：<b>相交</b>（其中相交成直角就是垂直）和<b>平行</b>。" },
+  { k: ["直线","端点","度量"], a: "直线可以向<b>两端无限延伸</b>。" },
+  { k: ["正方形","长方形","黑板","课桌","例子"], a: "生活里的平行：黑板上下边框、课桌对边、铁轨、斑马线；垂直：门窗框的横竖框、十字路口。" }
+];
+
+const log = document.getElementById('log'), form = document.getElementById('f'),
+      input = document.getElementById('q'), send = document.getElementById('send'),
+      chips = document.getElementById('chips');
+
+const CHIPS = ["什么是垂足？","不相交一定平行吗？","平行怎么记？","同一平面内两条直线有几种关系？","举几个生活中的例子"];
+CHIPS.forEach(t => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = t;
+  b.onclick = () => ask(t);
+  chips.appendChild(b);
+});
+
+function add(cls, html) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls; d.innerHTML = html;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+
+function answer(text) {
+  const t = (text || '').replace(/\s/g, '');
+  let hit = null;
+  for (const item of KB) {
+    if (item.k.some(k => t.includes(k))) { hit = item; break; }
+  }
+  if (hit) return hit.a;
+  if (/你好|在吗|嗨/.test(t)) return '俺老孙在！想问平行、垂直还是垂足？';
+  if (/谢谢|谢了/.test(t)) return '不客气！课后还想到什么问题，随时来问俺老孙。';
+  return '这个俺老孙还没学会讲清楚 🤔 你试试问：<b>什么是垂足</b>、<b>不相交一定平行吗</b>、<b>同一平面内两条直线有几种关系</b>。';
+}
+
+let busy = false;
+function ask(text) {
+  if (busy) return;
+  const q = (text || input.value || '').trim();
+  if (!q) return;
+  input.value = '';
+  add('me', q);
+  busy = true; send.disabled = true;
+  const thinking = add('wk', '……');
+  setTimeout(() => {
+    thinking.innerHTML = answer(q);
+    log.scrollTop = log.scrollHeight;
+    busy = false; send.disabled = false;
+    speak(thinking.textContent);
+  }, 260);
+}
+
+/* 有语音就用浏览器朗读（没有就安静） */
+function speak(txt) {
+  try {
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(txt.replace(/[「」]/g, ''));
+    u.lang = 'zh-CN'; u.rate = 0.98; u.pitch = 0.95;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+form.onsubmit = e => { e.preventDefault(); ask(); };
+</script>
+</body>
+</html>

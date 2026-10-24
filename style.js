@@ -220,8 +220,10 @@
         <div class="tag">${c.tag || ''}</div>
         <h2>${c.title}</h2>
         ${c.blocks.map(b => `<div class="line" data-step="${b.step || 0}">${b.t}</div>`).join('')}
+        ${c.cta ? `<a class="cta" href="${c.cta.href}" target="_blank" rel="noopener">${c.cta.label}</a>` : ''}
+        ${c.ask ? askHTML() : ''}
         <div class="foot">${c.foot || ''}<span id="stepInfo"></span></div>`;
-      cardEl.className = 'hero' + (c.center ? ' center' : '');
+      cardEl.className = 'hero' + (c.center ? ' center' : '') + (c.big ? ' big' : '');
     } else {
       cardEl.innerHTML = `
         <div class="hd"><h2>${c.title}</h2><div class="ln"></div><span class="tag">${c.tag || ''}</span></div>
