@@ -19,7 +19,7 @@ window.NODES = [
   { id: "p17", page: 17, seg: 3, title: "本段知识点", type: "card", video: "", say: ["本段知识点", "梳理一下"] },
   { id: "p18", page: 18, seg: 4, title: "旋转到 90° 成直角", type: "clip", video: "videos/p18_geom.mp4", say: ["转成直角", "演示垂直"] },
   { id: "p19", page: 19, seg: 4, title: "互相垂直的定义", type: "card", video: "videos/p19_plate.mp4", geom: "perp", say: ["什么是垂直", "垂线垂足"] },
-  { id: "p20", page: 20, seg: 4, title: "转一转，还是垂直吗", type: "clip", video: "videos/p20_clean.mp4", say: ["转一转还是垂直吗", "摆放方向"] },
+  { id: "p20", page: 20, seg: 4, title: "转一转，还是垂直吗", type: "clip", video: "videos/p20_skill.mp4", say: ["转一转还是垂直吗", "摆放方向"] },
   { id: "p21", page: 21, seg: 4, title: "小结：垂直与方向无关", type: "card", video: "", say: ["垂直与方向无关", "垂直小结"] },
   { id: "p22", page: 22, seg: 5, title: "第一题：平行还是垂直", type: "quiz", video: "videos/p22_plate.mp4", quiz: "q22", say: ["第一题", "基础题"] },
   { id: "p23", page: 23, seg: 5, title: "第一题的答案", type: "activity", video: "videos/p23_fix.mp4", say: ["第一题答案", "点评一下"], slot: true },
@@ -29,8 +29,8 @@ window.NODES = [
   { id: "p24c", page: 24, seg: 5, title: "判断 3：交点叫垂足吗", type: "quiz", video: "", quiz: "q24c", say: ["第三小题", "判断第三题"] },
   { id: "p24d", page: 24, seg: 5, title: "判断 4：不平行就相交", type: "quiz", video: "", quiz: "q24d", say: ["第四小题", "判断第四题"] },
   { id: "p26", page: 26, seg: 6, title: "知识导图", type: "card", cardEarly: true, video: "videos/p26_clean.mp4", say: ["总结", "知识梳理"] },
-  { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/5-12_wk_life_examples.mp4", say: ["生活中的例子", "举例子"] },
-  { id: "p28", page: 28, seg: 6, title: "老师寄语", type: "card", video: "", say: ["老师寄语", "下课"] }
+  { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/p27_life.mp4", say: ["生活中的例子", "举例子"] },
+  { id: "p28", page: 28, seg: 6, title: "课堂助教", type: "card", video: "", say: ["课堂助教", "课后继续问", "下课"] }
 ];
 
 window.SEG_NAME = { 1: "环节一 · 情境导入", 2: "环节二 · 相交与不相交", 3: "环节三 · 平行", 4: "环节四 · 垂直", 5: "环节五 · 分层练习", 6: "环节六 · 总结" };
