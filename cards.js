@@ -131,8 +131,9 @@ window.CARDS = {
       { n: "", t: "<b>1 不相交：互相平行</b>", step: 0, wide: true },
       { n: "", t: "定义：在同一个平面内不相交的两条直线叫做平行线，", step: 0, wide: true },
       { n: "", t: "也可以说这两条直线互相平行。", step: 0, wide: true },
-      { n: "", t: "<b>一般相交（夹角不是直角）</b>", step: 0, wide: true },
-      { n: "", t: "<b>特殊情况：垂直 —— 垂足</b>", step: 0, wide: true }
+      { n: "", t: "<b>2 相交</b>", step: 0, wide: true },
+      { n: "", t: "一般相交（夹角不是直角）", step: 0, wide: true, sub: true },
+      { n: "", t: "特殊情况：垂直 —— 垂足", step: 0, wide: true, sub: true }
     ],
     foot: "点击继续"
   },
