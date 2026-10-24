@@ -156,12 +156,11 @@ window.CARDS = {
     foot: "点击逐条揭示"
   },
   p28: {
-    hero: true, center: true, big: true, ask: true, title: "课堂助教", tag: "课前课后 · 随时问", steps: 1,
+    hero: true, center: true, big: true, ask: false, title: "结语", tag: "本课小结 · 课前课后随时问", steps: 1,
     blocks: [
-      { t: "课前课后有问题，就问<b>猪八戒助教</b>", step: 0, wide: true },
-      { t: "什么是垂足？不相交一定平行吗？打开就能问。", step: 0, wide: true }
+      { t: "这节课记住两句：<b>平行</b>——同一平面内不相交；<b>垂直</b>——相交成直角，交点叫垂足。", step: 0, wide: true },
+      { t: "课后还有问题，点下面的按钮，八戒助教接着给你讲。", step: 0, wide: true }
     ],
-    cta: { label: "打开助教大页 ▶", href: "assistant.html" },
-    foot: "也可以直接对课堂说：「八戒，什么是垂足？」"
+    cta: { label: "打开课堂助教 ▶", href: "assistant.html" }
   }
 };
