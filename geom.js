@@ -281,7 +281,54 @@
 
   function label(p, text, col, dpr) { labelAt(p[0], p[1], text, col, dpr, 26); }
 
-  function draw() { ctx.clearRect(0, 0, cv.width, cv.height); if (mode === 'cubeSkew') drawCubeSkew(tm); else if (mode === 'cubeSame') drawCubeSame(tm); else drawAngle(tm); }
+
+  /* ---------- 平行线（教师祝语页用）：两条同向延伸的直线 a∥b ---------- */
+  function drawParallel(t) {
+    const W = cv.width, H = cv.height, dpr = W / cv.clientWidth;
+    const ys = [0.245 * H, 0.785 * H];      // 两条线分居卡片上下，中间留给祝语
+    const x0 = 0.055 * W, x1 = 0.945 * W;
+    const pulse = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * 2 * Math.PI / 3.4));
+
+    ys.forEach((y, i) => {
+      // 主线（金色，轻微呼吸）
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,209,102,' + (0.62 + 0.30 * pulse) + ')';
+      ctx.lineWidth = 3.4 * dpr;
+      ctx.shadowColor = 'rgba(255,186,64,.9)';
+      ctx.shadowBlur = 14 * dpr * pulse;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      ctx.restore();
+
+      // 两端箭头，表示「向两端无限延伸」
+      [-1, 1].forEach(sgn => {
+        const ax = sgn < 0 ? x0 : x1, dir = sgn;
+        ctx.beginPath();
+        ctx.moveTo(ax + dir * 16 * dpr, y);
+        ctx.lineTo(ax + dir * 1 * dpr, y - 7 * dpr);
+        ctx.lineTo(ax + dir * 1 * dpr, y + 7 * dpr);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255,225,150,.95)';
+        ctx.fill();
+      });
+
+      // 沿线流动的小光点
+      const k = ((t / 4.6 + i * 0.42) % 1);
+      const px = x0 + (x1 - x0) * k;
+      const rg = ctx.createRadialGradient(px, y, 0, px, y, 22 * dpr);
+      rg.addColorStop(0, 'rgba(255,236,180,.95)');
+      rg.addColorStop(1, 'rgba(255,210,110,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(px, y, 22 * dpr, 0, 7); ctx.fill();
+
+      // 字母标签
+      labelAt(x0 - 26 * dpr, y, i ? 'b' : 'a', '#ffe6a8', dpr, 26);
+    });
+
+    // 右侧标 a∥b
+    labelAt(x1 - 0.10 * W, (ys[0] + ys[1]) / 2, 'a ∥ b', '#9ee6a8', dpr, 24);
+  }
+
+  function draw() { ctx.clearRect(0, 0, cv.width, cv.height); if (mode === 'cubeSkew') drawCubeSkew(tm); else if (mode === 'cubeSame') drawCubeSame(tm); else if (mode === 'parallel') drawParallel(tm); else drawAngle(tm); }
 
   function loop(now) {
     if (!active) return;
