@@ -88,8 +88,13 @@
   ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => {
     const a = audioCtx(); if (a && a.state === 'suspended') a.resume();
   }, { passive: true }));
+  /* 浏览器要求手势后才能出声：第一次点/按任意键就把音频解锁 */
+  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => {
+    const a = audioCtx(); if (a && a.state === 'suspended') a.resume();
+  }, { passive: true }));
   function tickBeep() { tone(880, 0.12, 0.13, 'square'); }
   function endBeep() { tone(660, 0.14, 0.14, 'square'); setTimeout(() => tone(990, 0.34, 0.16, 'square'), 170); }
+
 
   function playNode(i) {
     if (i < 0 || i >= N.length) return;
@@ -196,8 +201,8 @@
     if (!ASK_LOG.length) {
       const d = document.createElement('div'); d.className = 'askb a in';
       const w = document.createElement('span'); w.className = 'who'; w.textContent = '猪八戒';
-      const s = document.createElement('span'); s.textContent = '俺老猪在这儿——课前课后问什么都行，只要是这节课的。';
-      d.appendChild(w); d.appendChild(s); log.appendChild(d); return;
+      const sp = document.createElement('span'); sp.textContent = '俺老猪在这儿——课前课后问什么都行，只要是这节课的。';
+      d.appendChild(w); d.appendChild(sp); log.appendChild(d); return;
     }
     ASK_LOG.forEach(m => askAppend(host, m));
     log.scrollTop = log.scrollHeight;
@@ -300,9 +305,11 @@
       cardEl.innerHTML = `
         <div class="tag">${c.tag || ''}</div>
         <h2>${c.title}</h2>
-        ${c.blocks.map(b => `<div class="line" data-step="${b.step || 0}">${b.t}</div>`).join('')}
+        ${c.blocks.map(b => `<div class="line${b.sub ? ' subline' : ''}" data-step="${b.step || 0}">${b.t}</div>`).join('')}
+        ${c.cta ? `<a class="cta" href="${c.cta.href}" target="_blank" rel="noopener">${c.cta.label}</a>` : ''}
+        ${c.ask ? askHTML() : ''}
         <div class="foot">${c.foot || ''}<span id="stepInfo"></span></div>`;
-      cardEl.className = 'hero' + (c.center ? ' center' : '');
+      cardEl.className = 'hero' + (c.center ? ' center' : '') + (c.big ? ' big' : '');
     } else {
       cardEl.innerHTML = `
         <div class="hd"><h2>${c.title}</h2><div class="ln"></div><span class="tag">${c.tag || ''}</span></div>
@@ -638,7 +645,7 @@
       [/^(转起来|继续转)$/, () => { spin = true; GEO.setSpin(true); }]
     ];
     for (const [re, fn] of map) if (re.test(t)) { fn(); heard.innerHTML += `<span class="hit">→ ${re.source.slice(2, 8)}…</span>`; return; }
-    // —— 最后一页：像提问的话先交给课堂助教（不然「什么是平行线」会被页面口令抢走） ——
+    // —— 最后一页：像提问的话先交给课堂助教 ——
     if (askOpen() && looksLikeQuestion(t)) {
       const host = document.getElementById('card');
       if (host) { heard.innerHTML += '<span class="hit">→ 问猪八戒</span>'; askQuestion(host, text.trim()); return; }
