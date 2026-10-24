@@ -588,7 +588,7 @@
     return !!(cur && cur.id === 'p28' && !cardEl.hidden && cardEl.querySelector('#askIn'));
   }
   function looksLikeQuestion(t) {
-    return /[？?]|什么|怎么|为什么|咋|哪个|哪些|是不是|能不能|可不可以|多少|如何|请问|告诉我|解释|讲讲|说说|区别|一样吗/.test(t);
+    return /[？?]|什么|怎么|为什么|咋|哪|是不是|能不能|可不可以|多少|几|如何|请问|告诉我|解释|讲讲|说说|区别|一样吗|吗|呢/.test(t);
   }
   function handleText(text) {
     if (!text) return;
