@@ -58,9 +58,42 @@
   function hidePanels() { cardEl.hidden = true; quizEl.hidden = true; cardEl.innerHTML = ''; quizEl.innerHTML = ''; cardOpen = false; step = 0; if (typeof stopTimer === 'function') stopTimer(); }
   function showHint(t) { hint.textContent = t; }
 
+  /* ---------- 提示音（WebAudio 现场合成，不引入音频文件） ---------- */
+  let actx = null;
+  let beepCount = 0;
+  function audioCtx() {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      if (!actx) actx = new C();
+      if (actx.state === 'suspended' && actx.resume) actx.resume();
+      return actx;
+    } catch (_) { return null; }
+  }
+  function tone(freq, dur, vol, type) {
+    const a = audioCtx(); if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'square';
+      o.frequency.setValueAtTime(freq, a.currentTime);
+      g.gain.setValueAtTime(0.0001, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(vol || 0.12, a.currentTime + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(); o.stop(a.currentTime + dur + 0.02);
+      beepCount++;
+    } catch (_) {}
+  }
+  /* 浏览器要求手势后才能出声：第一次点/按任意键就把音频解锁 */
+  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => {
+    const a = audioCtx(); if (a && a.state === 'suspended') a.resume();
+  }, { passive: true }));
+  function tickBeep() { tone(880, 0.12, 0.13, 'square'); }
+  function endBeep() { tone(660, 0.14, 0.14, 'square'); setTimeout(() => tone(990, 0.34, 0.16, 'square'), 170); }
+
   function playNode(i) {
     if (i < 0 || i >= N.length) return;
-    GEO.stop(); hidePanels();
+    GEO.stop(); hidePanels(); hideTap();
     quizState = null; branch = false; answered = 0; quizDone = false;
     idx = i; cur = N[i]; paintNode(cur);
 
@@ -75,11 +108,24 @@
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
       showHint('播放中…');
+      hideTap(); armTap();
     } else {
       // 无视频的页：保留上一页的末帧作背景，不切成黑屏
       try { v.pause(); } catch (_) {}
       setTimeout(onEnded, 80);
     }
+  }
+
+  /* ---------- 自动播放被拦下时：盖一个「点一下开始」 ---------- */
+  let tapEl = null;
+  function tapBox() { if (!tapEl) tapEl = document.getElementById('tap'); return tapEl; }
+  function showTap() { const e = tapBox(); if (e) e.hidden = false; }
+  function hideTap() { const e = tapBox(); if (e) e.hidden = true; }
+  function armTap() {
+    setTimeout(() => {
+      if (!v.paused || v.ended) return;
+      showTap(); showHint('浏览器拦了自动播放 · 点一下画面开始');
+    }, 700);
   }
 
   function onEnded() {
@@ -99,9 +145,9 @@
   /* ---------- 最后一页：课堂助教（只答本课内容） ---------- */
   const ASK_TIPS = ['什么是平行线？', '垂足在哪里？', '怎么判断垂直？', '平行和垂直有什么不同？'];
   const ASK_LOG = [];
-  const ASK_REFUSAL = '我只回答《平行与垂直》这节课的问题，你可以问我“什么是平行线”“垂足在哪里”“怎么判断垂直”。';
+  const ASK_REFUSAL = '俺老猪只答《平行与垂直》这节课的问题——你可以问「什么是平行线」「垂足在哪里」「怎么判断垂直」。';
   let ASK_SRC = '本课范围';
-  const ASK_FOOT = '只答本课：平行线 / 垂直 / 垂足 / 记法 / 判断方法 / 练习 / 生活例子；问别的会被拒答。';
+  const ASK_FOOT = '课前课后都能问：平行 / 垂直 / 垂足 / 记法 / 判断方法 / 生活例子；问别的俺老猪不答。';
   /* 没有后端（GitHub Pages）时的本课知识卡：关键词命中，措辞取自本课 */
   const ASK_KB = [
     [/平行线|什么叫平行|平行的定义/, '在同一个平面内不相交的两条直线叫做平行线，也可以说这两条直线互相平行。'],
@@ -120,7 +166,7 @@
 
   const askHTML = () => `
     <div class="ask">
-      <div class="askhd">课堂助教 · 只答本课的问题<span class="tagx" id="askSrc">${ASK_SRC}</span></div>
+      <div class="askhd"><img class="askava" src="assets/bajie_tutor.png" alt="猪八戒"><span class="askwho">猪八戒 · 课堂助教</span><span class="tagx" id="askSrc">${ASK_SRC}</span></div>
       <div class="asklog" id="askLog"></div>
       <div class="askrow">
         <input id="askIn" type="text" maxlength="120" autocomplete="off"
@@ -137,7 +183,7 @@
     d.className = 'askb ' + (m.role === 'q' ? 'q' : 'a') + (m.cls ? ' ' + m.cls : '');
     if (m.role === 'a') {
       const w = document.createElement('span'); w.className = 'who';
-      w.textContent = m.cls === 'out' ? '助教 · 课外问题' : (m.cls === 'wait' ? '助教 · 正在想' : '助教');
+      w.textContent = m.cls === 'out' ? '猪八戒 · 课外问题' : (m.cls === 'wait' ? '猪八戒 · 正在想' : '猪八戒');
       d.appendChild(w);
     }
     const t = document.createElement('span'); t.textContent = m.text; d.appendChild(t);
@@ -147,9 +193,10 @@
     const log = host.querySelector('#askLog'); if (!log) return;
     log.innerHTML = '';
     if (!ASK_LOG.length) {
-      const h = document.createElement('div'); h.className = 'askhint';
-      h.textContent = '问我：什么是平行线？垂足在哪里？怎么判断垂直？';
-      log.appendChild(h); return;
+      const d = document.createElement('div'); d.className = 'askb a in';
+      const w = document.createElement('span'); w.className = 'who'; w.textContent = '猪八戒';
+      const s = document.createElement('span'); s.textContent = '俺老猪在这儿——课前课后问什么都行，只要是这节课的。';
+      d.appendChild(w); d.appendChild(s); log.appendChild(d); return;
     }
     ASK_LOG.forEach(m => askAppend(host, m));
     log.scrollTop = log.scrollHeight;
@@ -219,11 +266,9 @@
       cardEl.innerHTML = `
         <div class="tag">${c.tag || ''}</div>
         <h2>${c.title}</h2>
-        ${c.blocks.map(b => `<div class="line${b.sub ? ' subline' : ''}" data-step="${b.step || 0}">${b.t}</div>`).join('')}
-        ${c.cta ? `<a class="cta" href="${c.cta.href}" target="_blank" rel="noopener">${c.cta.label}</a>` : ''}
-        ${c.ask ? askHTML() : ''}
+        ${c.blocks.map(b => `<div class="line" data-step="${b.step || 0}">${b.t}</div>`).join('')}
         <div class="foot">${c.foot || ''}<span id="stepInfo"></span></div>`;
-      cardEl.className = 'hero' + (c.center ? ' center' : '') + (c.big ? ' big' : '');
+      cardEl.className = 'hero' + (c.center ? ' center' : '');
     } else {
       cardEl.innerHTML = `
         <div class="hd"><h2>${c.title}</h2><div class="ln"></div><span class="tag">${c.tag || ''}</span></div>
@@ -281,7 +326,11 @@
       el.classList.toggle('danger', left <= 10 && left > 0);
     };
     paint();
-    timerId = setInterval(() => { left--; paint(); if (left <= 0) clearInterval(timerId); }, 1000);
+    timerId = setInterval(() => {
+      left--; paint();
+      if (left > 0 && left <= 5) tickBeep();                    // 5 4 3 2 1 各一声「滴」
+      if (left <= 0) { clearInterval(timerId); endBeep(); }      // 时间到「滴滴——」
+    }, 1000);
   }
 
 
@@ -574,11 +623,17 @@
     gate.classList.add('hidden'); started = true;
     playNode(0); startVoice();
   };
+  document.getElementById('tap').onclick = e => {
+    e.stopPropagation(); hideTap();
+    const p = v.play(); if (p && p.catch) p.catch(() => {});
+    setTimeout(() => { if (v.paused && !v.ended && cur && C[cur.id]) openCard(1); }, 900);
+  };
   document.getElementById('btnNext').onclick = e => { e.stopPropagation(); next(); };
   document.getElementById('btnPrev').onclick = e => { e.stopPropagation(); prev(); };
   document.getElementById('btnReplay').onclick = e => { e.stopPropagation(); playNode(idx); };
   document.getElementById('btnSpin').onclick = e => { e.stopPropagation(); spin = !spin; GEO.setSpin(spin); e.target.textContent = spin ? '旋转中' : '已暂停'; };
 
+  v.addEventListener('play', hideTap);
   v.addEventListener('ended', onEnded);
   v.addEventListener('error', () => {
     const src = v.getAttribute('src') || '';
@@ -618,6 +673,7 @@
 
   /* 探针 */
   window.APP = {
+    timer: s => startTimer(s), beeps: () => beepCount, tapShown: () => !!(tapEl && !tapEl.hidden),
     say: t => handleText(t),
     state: () => ({ idx, id: cur && cur.id, page: cur && cur.page, card: !cardEl.hidden, step, quiz: !quizEl.hidden, branch, geo: GEO.mode, geoOn: GEO.active, geoTime: +GEO.time.toFixed(2), videoEnded: v.ended, videoPaused: v.paused, src: v.getAttribute('src') }),
     go: id => { const i = N.findIndex(n => n.id === id); if (i >= 0) playNode(i); },
