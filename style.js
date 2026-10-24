@@ -4,6 +4,7 @@
   const v = document.getElementById('video'), geoCv = document.getElementById('geo');
   const cardEl = document.getElementById('card'), quizEl = document.getElementById('quiz');
   const pno = document.getElementById('pno'), ptitle = document.getElementById('ptitle'),
+        pnum = document.getElementById('pnum'),
     pseg = document.getElementById('pseg'), modeTag = document.getElementById('modeTag'),
     hint = document.getElementById('hint'), gate = document.getElementById('gate');
   const micChip = document.getElementById('micChip'), micTxt = document.getElementById('micTxt'),
@@ -52,7 +53,7 @@
     ptitle.textContent = n.title;
     pseg.textContent = SEG[n.seg] || '';
     modeTag.hidden = !n.geom;
-    modeTag.textContent = n.geom ? '几何层：' + ({ cubeSkew: '异面直线', cubeSame: '同一平面', angle90: '角度扫掠', perp: '垂直', rotatePerp: '垂直旋转' }[n.geom] || n.geom) : '';
+    modeTag.textContent = n.geom ? '几何层：' + ({ cubeSkew: '异面直线', cubeSame: '同一平面', angle90: '角度扫掠', perp: '垂直', rotatePerp: '垂直旋转', parallel: '平行线' }[n.geom] || n.geom) : '';
   }
 
   function hidePanels() { cardEl.hidden = true; quizEl.hidden = true; cardEl.innerHTML = ''; quizEl.innerHTML = ''; cardOpen = false; step = 0; if (typeof stopTimer === 'function') stopTimer(); }
@@ -102,7 +103,7 @@
     quizState = null; branch = false; answered = 0; quizDone = false;
     idx = i; cur = N[i]; paintNode(cur);
 
-    if (cur.geom) GEO.start(cur.geom, { follow: true, video: v, ax: 0.49, ay: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.5 : 0.38, scale: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.095 : 0.074, dur: cur.geomDur || 0 });
+    if (cur.geom) GEO.start(cur.geom, { follow: cur.geom !== 'parallel', video: v, ax: 0.49, ay: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.5 : 0.38, scale: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.095 : 0.074, dur: cur.geomDur || 0 });
 
     if (cur.quiz) renderQuiz(cur.quiz);      // 题板与出题动画同时出现
     if (cur.cardEarly) setTimeout(() => { if (cur && cur.cardEarly && cardEl.hidden) openCard(1); }, 300);
@@ -745,6 +746,8 @@
   })();
 
   /* 探针 */
+  if (pnum) pnum.textContent = String(Math.max.apply(null, N.map(x => x.page)));
+
   window.APP = {
     timer: s => startTimer(s), beeps: () => beepCount, tapShown: () => !!(tapEl && !tapEl.hidden),
     say: t => handleText(t),
