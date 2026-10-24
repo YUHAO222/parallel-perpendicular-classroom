@@ -156,10 +156,10 @@ window.CARDS = {
     foot: "点击逐条揭示"
   },
   p28: {
-    hero: true, center: true, big: true, ask: false, title: "结语", tag: "本课小结 · 课前课后随时问", steps: 1,
+    hero: true, center: true, big: true, ask: false, title: "结语", tag: "本课小结", steps: 1,
     blocks: [
-      { t: "这节课记住两句：<b>平行</b>——同一平面内不相交；<b>垂直</b>——相交成直角，交点叫垂足。", step: 0, wide: true },
-      { t: "课后还有问题，点下面的按钮，八戒助教接着给你讲。", step: 0, wide: true }
+      { t: "平行不相交，垂直成直角——都别忘了<b>「同一平面内」</b>。", step: 0, wide: true },
+      { t: "愿大家如平行线，<b>同向奔赴，不负时光</b>。", step: 0, wide: true }
     ],
     cta: { label: "打开课堂助教 ▶", href: "assistant.html" }
   }
