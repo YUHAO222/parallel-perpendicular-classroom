@@ -32,7 +32,7 @@ window.NODES = [
   { id: "p27", page: 27, seg: 6, title: "生活中的平行与垂直", type: "examples", video: "videos/p27_life.mp4", say: ["生活中的例子", "举例子"] },
   { id: "p28", page: 28, seg: 6, title: "老师寄语", type: "card", video: "", cleanBg: true, geom: "parallel",
     say: ["老师寄语", "愿大家如平行线", "同向奔赴，不负时光"] },
-  { id: "p29", page: 29, seg: 6, title: "课后答疑", type: "card", video: "", cleanBg: true,
+  { id: "p29", page: 29, seg: 6, title: "课后答疑", type: "card", video: "", cleanBg: true, ctaPage: "p29",
     say: ["有问题找助教", "点下面按钮", "八戒助教来助你一臂之力"] }
 ];
 
