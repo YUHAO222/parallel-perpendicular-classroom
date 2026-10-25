@@ -67,6 +67,23 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
 .quizbar .qf button{font-size:13px;padding:6px 14px;border-radius:9px;border:0;cursor:pointer;
   background:linear-gradient(180deg,#ffe6a6,#e9b95c);color:#20180a;font-weight:700}
 
+/* 第24页 判断题：字放大 */
+.quizbar.tf{width:min(900px,92%)}
+.quizbar.tf h3{font-size:21px;margin-bottom:6px}
+.quizbar.tf .q{font-size:20px;line-height:1.55;padding:13px 16px;margin:12px 0}
+.quizbar.tf .btns{gap:12px}
+.quizbar.tf .btns button{font-size:18px;font-weight:700;padding:11px 26px;border-radius:11px}
+.quizbar.tf .why{font-size:16px;line-height:1.5;margin:8px 0 2px}
+.quizbar.tf .qf{font-size:14px}
+
+/* 只显示、不发声的提示句 */
+#note{position:absolute;left:50%;transform:translateX(-50%);bottom:92px;z-index:8;
+  max-width:min(1040px,88%);padding:16px 30px;border-radius:16px;text-align:center;
+  background:rgba(8,17,28,.80);border:1px solid rgba(255,209,102,.38);
+  color:#ffe6b3;font-size:clamp(21px,2.5vw,36px);font-weight:800;line-height:1.5;letter-spacing:1px;
+  box-shadow:0 16px 44px rgba(0,0,0,.5);animation:pop .22s ease-out}
+
+
 .hint{position:absolute;left:18px;bottom:18px;z-index:6;font-size:11.5px;color:#cddaea;
   background:rgba(5,12,22,.72);border:1px solid rgba(255,255,255,.10);padding:5px 9px;border-radius:8px}
 .nav{position:absolute;right:16px;bottom:16px;display:flex;gap:8px;z-index:6}
