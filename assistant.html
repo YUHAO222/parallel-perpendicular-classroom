@@ -36,6 +36,11 @@
   form button{background:linear-gradient(180deg,#ffe08a,#ffb020);color:#241a05;border:none;
     padding:0 30px;border-radius:14px;font-size:clamp(16px,1.7vw,22px);font-weight:800;cursor:pointer;font-family:inherit}
   form button:disabled{opacity:.45;cursor:default}
+  #mic{flex:none;width:clamp(58px,6vw,74px);padding:0;font-size:clamp(20px,2.2vw,28px);
+       background:rgba(95,184,255,.16);border:1px solid #3a5f8a;color:#dbe9ff}
+  #mic.live{background:rgba(255,90,90,.32);border-color:#ff8a8a;color:#fff;
+       animation:micPulse 1s ease-in-out infinite}
+  @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,.55)}50%{box-shadow:0 0 0 12px rgba(255,90,90,0)}}
 </style>
 </head>
 <body>
@@ -52,7 +57,8 @@
 <div class="chips" id="chips"></div>
 
 <form id="f">
-  <input id="q" placeholder="问问看：什么是垂足？不相交一定平行吗？" autocomplete="off">
+  <input id="q" placeholder="打字问，或按 🎤 说话问（例：什么是垂足？）" autocomplete="off">
+  <button id="mic" type="button" title="按一下说话提问">🎤</button>
   <button id="send" type="submit">问一问</button>
 </form>
 
@@ -138,6 +144,81 @@ function speak(txt) {
 }
 
 form.onsubmit = e => { e.preventDefault(); ask(); };
+
+/* 从课堂带问题过来：assistant.html?q=什么是垂足 */
+(function () {
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) { setTimeout(() => ask(q), 120); }
+  else { try { input.focus(); } catch (e) {} }
+})();
+
+/* ---------------- 语音提问（Web Speech API，说完自动提问） ---------------- */
+const micBtn = document.getElementById('mic');
+let recog = null, listening = false;
+
+function setListening(on) {
+  listening = on;
+  micBtn.classList.toggle('live', on);
+  micBtn.textContent = on ? '■' : '🎤';
+  micBtn.title = on ? '再点一下停止' : '按一下说话提问';
+}
+
+function micSay(html) { add('wk', html); }
+
+function startRec() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    micSay('这个浏览器不支持语音输入，请用 Chrome 或 Edge 打开本页（电脑或安卓都行）。');
+    return;
+  }
+  if (!/^https?:$/.test(location.protocol)) {
+    micSay('麦克风只能在 https 或 localhost 下使用，现在这个地址不行。');
+    return;
+  }
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+  try { if (recog) recog.abort(); } catch (e) {}
+
+  const r = new SR();
+  recog = r;
+  r.lang = 'zh-CN';
+  r.continuous = false;
+  r.interimResults = true;
+  r.maxAlternatives = 3;
+  setListening(true);
+
+  r.onresult = e => {
+    let fin = '', itm = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const s = e.results[i][0].transcript;
+      if (e.results[i].isFinal) fin += s; else itm += s;
+    }
+    input.value = (fin || itm).trim();
+    if (fin.trim()) { try { r.stop(); } catch (e) {} }
+  };
+  r.onerror = e => {
+    const m = {
+      'not-allowed': '麦克风没被允许：点地址栏左边的 🔒 → 把「麦克风」改成「允许」，再点 🎤。',
+      'service-not-allowed': '浏览器禁用了语音识别，请用 Chrome/Edge，并在设置里允许麦克风。',
+      'no-speech': '没听到声音，再点一次 🎤 说一遍。',
+      'audio-capture': '没找到麦克风设备，检查一下耳机/麦克风有没有插好。',
+      'network': '语音识别要联网（Chrome 的识别在云端），检查网络后再试。',
+      'aborted': null
+    }[e.error];
+    if (m) micSay(m);
+  };
+  r.onend = () => {
+    setListening(false);
+    const q = input.value.trim();
+    if (q) ask(q);         // 说完自动提问
+  };
+  try { r.start(); } catch (e) { setListening(false); micSay('麦克风打不开：' + e.message); }
+}
+
+micBtn.onclick = () => {
+  if (listening) { try { recog && recog.stop(); } catch (e) {} setListening(false); return; }
+  startRec();
+};
+
 </script>
 </body>
 </html>
