@@ -81,7 +81,8 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
   max-width:min(1040px,88%);padding:16px 30px;border-radius:16px;text-align:center;
   background:rgba(8,17,28,.80);border:1px solid rgba(255,209,102,.38);
   color:#ffe6b3;font-size:clamp(21px,2.5vw,36px);font-weight:800;line-height:1.5;letter-spacing:1px;
-  box-shadow:0 16px 44px rgba(0,0,0,.5);animation:pop .22s ease-out}
+  box-shadow:0 16px 44px rgba(0,0,0,.5);animation:noteFade .22s ease-out}
+@keyframes noteFade{from{opacity:0}to{opacity:1}}
 
 
 .hint{position:absolute;left:18px;bottom:18px;z-index:6;font-size:11.5px;color:#cddaea;
