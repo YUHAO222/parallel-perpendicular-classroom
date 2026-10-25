@@ -15,7 +15,7 @@ window.NODES = [
   { id: "p13", page: 13, seg: 3, title: "立方体：两个不同的面", type: "clip", video: "videos/p13_v2.mp4", geom: "cubeSkew", say: ["看立方体", "两个不同的面"] },
   { id: "p14", page: 14, seg: 3, title: "立方体：同一个面", type: "clip", video: "videos/p14_v2.mp4", geom: "cubeSame", say: ["同一个面", "这才是平行线"] },
   { id: "p15", page: 15, seg: 3, title: "八戒提醒：同一平面", type: "clip",
-    video: "videos/3-4_bj_remind_plane.mp4", say: ["八戒提醒同一平面", "说平行先想同一平面", "同一平面提醒", "八戒提醒前提"] },
+    video: "videos/p15_bj_remind_still.mp4", say: ["八戒提醒同一平面", "说平行先想同一平面", "同一平面提醒", "八戒提醒前提"] },
   { id: "p17", page: 17, seg: 3, title: "本段知识点", type: "card", video: "", say: ["本段知识点", "梳理一下"] },
   { id: "p18", page: 18, seg: 4, title: "旋转到 90° 成直角", type: "clip", video: "videos/p18_geom.mp4", say: ["转成直角", "演示垂直"] },
   { id: "p19", page: 19, seg: 4, title: "互相垂直的定义", type: "card", video: "videos/p19_plate.mp4", geom: "perp", say: ["什么是垂直", "垂线垂足"] },
