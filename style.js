@@ -111,12 +111,22 @@
     if (cur.cleanBg) v.classList.add('hidden');
     if (cur.video) {
       v.classList.remove('hidden');
+      v.preload = 'auto';
       v.src = cur.video; v.currentTime = 0;
       listenPaused = true; setMic('动画播放中 · 暂停聆听', false);
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
       showHint('播放中…');
       hideTap(); armTap();
+      // 顺手把下一页的视频拉进缓存，免得每次切页都等一下
+      setTimeout(() => {
+        const nx = N[idx + 1];
+        if (nx && nx.video && !document.querySelector('link[data-pf="1"][href="' + nx.video + '"]')) {
+          const l = document.createElement('link');
+          l.rel = 'prefetch'; l.as = 'video'; l.href = nx.video; l.setAttribute('data-pf', '1');
+          document.head.appendChild(l);
+        }
+      }, 1500);
     } else {
       // 无视频的页：保留上一页的末帧作背景（标了 cleanBg 的页则用干净底色，不留人物画面）
       if (!cur.cleanBg) { try { v.pause(); } catch (_) {} }
@@ -700,15 +710,23 @@
   };
   document.getElementById('tap').onclick = e => {
     e.stopPropagation(); hideTap();
-    const p = v.play(); if (p && p.catch) p.catch(() => {});
-    setTimeout(() => { if (v.paused && !v.ended && cur && C[cur.id]) openCard(1); }, 900);
+    const p = v.play();
+    if (p && p.catch) p.catch(err => {
+      // 被拦截或这页没有视频：别把卡片顶上来当成"播放"，把遮罩还给用户
+      showTap(); showHint('这一页要点一下才能播（浏览器拦截了自动播放）');
+    });
+    setTimeout(() => {
+      if (v.paused && !v.ended && cur && !cur.video) showTap();
+    }, 900);
   };
   document.getElementById('btnNext').onclick = e => { e.stopPropagation(); next(); };
   document.getElementById('btnPrev').onclick = e => { e.stopPropagation(); prev(); };
   document.getElementById('btnReplay').onclick = e => { e.stopPropagation(); playNode(idx); };
   document.getElementById('btnSpin').onclick = e => { e.stopPropagation(); spin = !spin; GEO.setSpin(spin); e.target.textContent = spin ? '旋转中' : '已暂停'; };
 
-  v.addEventListener('play', hideTap);
+  v.addEventListener('play', () => { hideTap(); if (hint.textContent.indexOf('拦截') >= 0) showHint('播放中…'); });
+  v.addEventListener('playing', () => { hideTap(); if (v.currentTime > 0) showHint('播放中…'); });
+  v.addEventListener('waiting', () => { if (!v.paused) showHint('缓冲中…'); });
   v.addEventListener('ended', onEnded);
   v.addEventListener('error', () => {
     const src = v.getAttribute('src') || '';
