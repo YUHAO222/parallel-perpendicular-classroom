@@ -119,10 +119,9 @@ window.CARDS = {
     foot: "点击逐条揭示"
   },
   p21: {
-    hero: true, title: "不管怎么摆放，只要相交成直角，就是互相垂直", tag: "小结", steps: 2,
+    hero: true, title: "不管怎么摆放，只要相交成直角，就是互相垂直", tag: "小结", steps: 1,
     blocks: [
-      { n: "1", t: "垂直与两条直线的摆放方向无关", step: 1 },
-      { n: "2", t: "只有相交成直角时，交点才叫垂足", step: 2 }
+      { n: "", t: "下面我们做些练习，巩固一下本节课所学的知识", step: 1, wide: true }
     ],
     foot: "点击继续"
   },
