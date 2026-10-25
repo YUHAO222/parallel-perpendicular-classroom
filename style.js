@@ -103,6 +103,13 @@
     quizState = null; branch = false; answered = 0; quizDone = false;
     idx = i; cur = N[i]; paintNode(cur);
 
+    // 只显示、不发声的提示句（cur.note）
+    const noteEl = document.getElementById('note');
+    if (noteEl) {
+      if (cur.note) { noteEl.textContent = cur.note; noteEl.hidden = false; }
+      else { noteEl.textContent = ''; noteEl.hidden = true; }
+    }
+
     if (cur.geom) GEO.start(cur.geom, { follow: cur.geom !== 'parallel', video: v, ax: 0.49, ay: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.5 : 0.38, scale: cur.geom === 'angle90' || cur.geom === 'perp' ? 0.095 : 0.074, dur: cur.geomDur || 0 });
 
     if (cur.quiz) renderQuiz(cur.quiz);      // 题板与出题动画同时出现
@@ -453,6 +460,7 @@
       <div class="why" id="qwhy"></div>
       <div class="qf"><span id="qstat">${q.mode === 'tf' ? '逐题判定 · 八戒即时点评' : '全部选好后点「提交」'}</span>
       <span class="qbtns">${q.mode === 'tf' ? '' : '<button id="qsubmit">提交</button>'}<button id="qskip">跳过</button><button id="qnext" hidden>下一段 ▶</button></span></div>`;
+    quizEl.classList.toggle('tf', q.mode === 'tf');
     quizEl.hidden = false;
     quizEl.querySelectorAll('.q').forEach(row => {
       row.querySelectorAll('button').forEach(b => b.onclick = () => pick(row, b));
@@ -498,7 +506,12 @@
     const q = quizState.q;
     if (q.mode === 'sort') v = (v === '相交') ? 'yes' : 'no';   // 分类题的按钮值是 yes/no
     const key = (q.mode === 'tf') ? (n - 1) : n;      // tf 的 data-k 从 0 开始
-    const row = quizEl.querySelector(`.q[data-k="${key}"]`);
+    let row = quizEl.querySelector(`.q[data-k="${key}"]`);
+    // p24a~p24d 每页只有一小题：说「第2/3/4题」也要落到这一行
+    if (!row && q.mode === 'tf') {
+      const rows = quizEl.querySelectorAll('.q');
+      if (rows.length === 1) row = rows[0];
+    }
     if (!row) return false;
     const btn = [...row.querySelectorAll('button')].find(b => b.dataset.v === v || b.dataset.v.startsWith(v) || v.startsWith(b.dataset.v));
     if (!btn) return false;
@@ -655,6 +668,13 @@
     if (listenPaused || branch || (cur && cur.video && !v.ended && !v.paused)) return;
     // 语音逐题作答：「第3组相交」「第2题垂直」「第四题错」
     if (quizState && !quizEl.hidden) {
+      // 直接说「对 / 错」也能作答（四道判断题都支持）
+      if (/^(对|错|正确|错误)$/.test(t)) {
+        const bv = (t === '正确') ? '对' : (t === '错误') ? '错' : t;
+        if (voiceAnswer(1, bv) && quizState && quizEl && !quizEl.hidden) {
+          heard.innerHTML += `<span class="hit">→ ${bv}</span>`; return;
+        }
+      }
       const ans = t.match(/^第?([0-9一二两三四五六七八]{1,2})(?:组|题|句|条|个)?(相交|不相交|平行|垂直|都不是|对|错|正确|错误)$/);
       if (ans) {
         const n = cn2num(ans[1]);
