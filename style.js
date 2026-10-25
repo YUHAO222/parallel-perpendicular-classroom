@@ -662,7 +662,13 @@
       [/^(转起来|继续转)$/, () => { spin = true; GEO.setSpin(true); }]
     ];
     for (const [re, fn] of map) if (re.test(t)) { fn(); heard.innerHTML += `<span class="hit">→ ${re.source.slice(2, 8)}…</span>`; return; }
-    // —— 最后一页：像提问的话先交给课堂助教 ——
+    // —— 答疑页（p29）：说一个问题就直接带着它跳到大页去问 ——
+    if (looksLikeQuestion(t) && cur && cur.id === 'p29') {
+      heard.innerHTML += '<span class="hit">→ 带着问题去问猪八戒</span>';
+      location.href = 'assistant.html?q=' + encodeURIComponent(text.trim());
+      return;
+    }
+    // —— 内嵌助教的页：像提问的话交给猪八戒 ——
     if (askOpen() && looksLikeQuestion(t)) {
       const host = document.getElementById('card');
       if (host) { heard.innerHTML += '<span class="hit">→ 问猪八戒</span>'; askQuestion(host, text.trim()); return; }
