@@ -116,7 +116,7 @@
       back.onclick = () => {
         try { window.close(); } catch (e) {}
         setTimeout(() => {
-          if (!document.hidden) {
+          if (true) {
             let tip = document.getElementById('backTip');
             if (!tip) {
               tip = document.createElement('div'); tip.id = 'backTip';
