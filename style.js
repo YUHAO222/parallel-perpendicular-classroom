@@ -106,7 +106,7 @@
     // 只显示、不发声的提示句（cur.note）
     const noteEl = document.getElementById('note');
     if (noteEl) {
-      if (cur.note) { noteEl.textContent = cur.note; noteEl.hidden = false; }
+      if (cur.note && !cur.noteAfter) { noteEl.textContent = cur.note; noteEl.hidden = false; }
       else { noteEl.textContent = ''; noteEl.hidden = true; }
     }
 
@@ -155,6 +155,11 @@
 
   function onEnded() {
     showHint('点击画面 / 空格 / → 继续');
+    // 视频播完才出现的提示句（如 p18：悟空操作完再提问）
+    if (cur && cur.note && cur.noteAfter) {
+      const ne = document.getElementById('note');
+      if (ne) { ne.textContent = cur.note; ne.hidden = false; }
+    }
     listenPaused = false; setMic(quizState ? '答题中 · 说「对了 / 错了」' : '聆听中', true);
     if (!cur) return;
     if (cur.quiz) {
