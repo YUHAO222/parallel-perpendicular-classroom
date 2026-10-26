@@ -103,6 +103,35 @@
     quizState = null; branch = false; answered = 0; quizDone = false;
     idx = i; cur = N[i]; paintNode(cur);
 
+    // 右下角固定角标（cur.cornerNote）＋ 返回课件按钮（cur.backBtn）
+    let cor = document.getElementById('cornerNote');
+    if (!cor) { cor = document.createElement('div'); cor.id = 'cornerNote'; document.getElementById('stage').appendChild(cor); }
+    if (cur.cornerNote) { cor.textContent = cur.cornerNote; cor.hidden = false; } else { cor.textContent = ''; cor.hidden = true; }
+    let back = document.getElementById('backBtn');
+    if (!back) {
+      back = document.createElement('button');
+      back.id = 'backBtn';
+      back.type = 'button';
+      back.textContent = '返回课件';
+      back.onclick = () => {
+        try { window.close(); } catch (e) {}
+        setTimeout(() => {
+          if (!document.hidden) {
+            let tip = document.getElementById('backTip');
+            if (!tip) {
+              tip = document.createElement('div'); tip.id = 'backTip';
+              tip.innerHTML = '本页已结束，请按 <b>Alt + Tab</b> 回到 PPT<small>（浏览器不允许脚本直接关闭这个标签）</small>';
+              document.getElementById('stage').appendChild(tip);
+            }
+            tip.hidden = false;
+            setTimeout(() => { tip.hidden = true; }, 6000);
+          }
+        }, 350);
+      };
+      document.getElementById('stage').appendChild(back);
+    }
+    back.hidden = !cur.backBtn;
+
     // 只显示、不发声的提示句（cur.note）
     const noteEl = document.getElementById('note');
     if (noteEl) {
@@ -168,12 +197,12 @@
       const ne = document.getElementById('note');
       if (ne) { ne.textContent = cur.note; ne.hidden = false; }
     }
-    listenPaused = false; setMic(quizState ? '答题中 · 说「对了 / 错了」' : '聆听中', true);
+    listenPaused = false; setMic(quizState ? (cur && cur.noVoice ? '答题中 · 点按钮作答' : '答题中 · 说「对了 / 错了」') : '聆听中', true);
     if (!cur) return;
     if (cur.quiz) {
       if (!quizState || quizState.id !== cur.quiz || quizEl.hidden) renderQuiz(cur.quiz);
       const st = quizEl.querySelector('#qstat');
-      if (st && !quizDone) st.textContent = quizState.q.mode === 'tf' ? '可以作答了 · 八戒即时点评' : '可以作答了 · 全部选好后点「提交」';
+      if (st && !quizDone) st.textContent = (cur && cur.noVoice) ? '可以作答了 · 点「对 / 错」作答' : (quizState.q.mode === 'tf' ? '可以作答了 · 八戒即时点评' : '可以作答了 · 全部选好后点「提交」');
       return;
     }
     if (C[cur.id]) { openCard(1); return; }
@@ -680,7 +709,7 @@
     // —— 以下口令在播放途中忽略，避免误触 ——
     if (listenPaused || branch || (cur && cur.video && !v.ended && !v.paused)) return;
     // 语音逐题作答：「第3组相交」「第2题垂直」「第四题错」
-    if (quizState && !quizEl.hidden) {
+    if (quizState && !quizEl.hidden && !(cur && cur.noVoice)) {
       // 直接说「对 / 错」也能作答（四道判断题都支持）
       if (/^(对|错|正确|错误)$/.test(t)) {
         const bv = (t === '正确') ? '对' : (t === '错误') ? '错' : t;
@@ -781,8 +810,8 @@
     next();
   });
   window.addEventListener('keydown', e => {
-    if (e.code === 'Space' || e.code === 'ArrowRight') { e.preventDefault(); next(); }
-    else if (e.code === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if (e.code === 'Space' || e.code === 'ArrowRight' || e.code === 'ArrowDown' || e.code === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp' || e.code === 'PageUp') { e.preventDefault(); prev(); }
     else if (e.key === 'r' || e.key === 'R') playNode(idx);
     else if (e.key === 's' || e.key === 'S') { spin = !spin; GEO.setSpin(spin); }
   });
