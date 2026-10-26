@@ -114,19 +114,17 @@
       back.type = 'button';
       back.textContent = '返回课件';
       back.onclick = () => {
+        // 先同步显示提示（浏览器若允许关闭，页面直接消失，提示也就无所谓）
+        let tip = document.getElementById('backTip');
+        if (!tip) {
+          tip = document.createElement('div');
+          tip.id = 'backTip';
+          tip.innerHTML = '本页已结束，请按 <b>Alt + Tab</b> 回到 PPT<small>（浏览器不允许脚本直接关闭这个标签）</small>';
+          document.getElementById('stage').appendChild(tip);
+        }
+        tip.hidden = false;
+        setTimeout(() => { if (tip) tip.hidden = true; }, 8000);
         try { window.close(); } catch (e) {}
-        setTimeout(() => {
-          if (true) {
-            let tip = document.getElementById('backTip');
-            if (!tip) {
-              tip = document.createElement('div'); tip.id = 'backTip';
-              tip.innerHTML = '本页已结束，请按 <b>Alt + Tab</b> 回到 PPT<small>（浏览器不允许脚本直接关闭这个标签）</small>';
-              document.getElementById('stage').appendChild(tip);
-            }
-            tip.hidden = false;
-            setTimeout(() => { tip.hidden = true; }, 6000);
-          }
-        }, 350);
       };
       document.getElementById('stage').appendChild(back);
     }
