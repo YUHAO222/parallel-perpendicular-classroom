@@ -68,13 +68,13 @@ html,body{margin:0;height:100%;background:#05080e;color:var(--ink);
   background:linear-gradient(180deg,#ffe6a6,#e9b95c);color:#20180a;font-weight:700}
 
 /* 第24页 判断题：字放大 */
-.quizbar.tf{width:min(900px,92%)}
-.quizbar.tf h3{font-size:21px;margin-bottom:6px}
-.quizbar.tf .q{font-size:20px;line-height:1.55;padding:13px 16px;margin:12px 0}
-.quizbar.tf .btns{gap:12px}
-.quizbar.tf .btns button{font-size:18px;font-weight:700;padding:11px 26px;border-radius:11px}
-.quizbar.tf .why{font-size:16px;line-height:1.5;margin:8px 0 2px}
-.quizbar.tf .qf{font-size:14px}
+.quizbar.tf{width:min(1180px,86vw)}
+.quizbar.tf h3{font-size:clamp(18px,1.45vw,30px);margin-bottom:6px}
+.quizbar.tf .q{font-size:clamp(19px,1.62vw,34px);line-height:1.55;padding:0.65em 0.9em;margin:0.6em 0}
+.quizbar.tf .btns{gap:0.7em}
+.quizbar.tf .btns button{font-size:clamp(17px,1.45vw,30px);font-weight:700;padding:0.55em 1.25em;border-radius:11px}
+.quizbar.tf .why{font-size:clamp(14px,1.15vw,24px);line-height:1.5;margin:8px 0 2px}
+.quizbar.tf .qf{font-size:clamp(13px,1.05vw,20px)}
 
 /* 只显示、不发声的提示句 */
 #note{position:absolute;left:50%;transform:translateX(-50%);bottom:92px;z-index:8;
