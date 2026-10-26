@@ -106,7 +106,8 @@
     // 只显示、不发声的提示句（cur.note）
     const noteEl = document.getElementById('note');
     if (noteEl) {
-      if (cur.note && !cur.noteAfter) { noteEl.textContent = cur.note; noteEl.hidden = false; }
+      const delayNote = !!(cur.note && cur.video);   // 有动画的页：等播完再出现
+      if (cur.note && !delayNote) { noteEl.textContent = cur.note; noteEl.hidden = false; }
       else { noteEl.textContent = ''; noteEl.hidden = true; }
     }
 
@@ -123,6 +124,13 @@
       listenPaused = true; setMic('动画播放中 · 暂停聆听', false);
       const p = v.play();
       if (p && p.catch) p.catch(() => {});
+      // 万一动画放不出来，也别把这句话弄丢
+      v.addEventListener('error', () => {
+        if (cur && cur.note) {
+          const ne = document.getElementById('note');
+          if (ne) { ne.textContent = cur.note; ne.hidden = false; }
+        }
+      }, { once: true });
       showHint('播放中…');
       hideTap(); armTap();
       // 顺手把下一页的视频拉进缓存，免得每次切页都等一下
@@ -156,7 +164,7 @@
   function onEnded() {
     showHint('点击画面 / 空格 / → 继续');
     // 视频播完才出现的提示句（如 p18：悟空操作完再提问）
-    if (cur && cur.note && cur.noteAfter) {
+    if (cur && cur.note) {
       const ne = document.getElementById('note');
       if (ne) { ne.textContent = cur.note; ne.hidden = false; }
     }
