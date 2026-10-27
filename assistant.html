@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+/* 旧内核兜底：IE / 360兼容模式 解析不了本页脚本，会只显示一片黑。
+   这里用 ES5 检测，给出可读的提示，而不是黑屏。 */
+(function () {
+  var ok = true;
+  try { eval('const __a=1; let __b=2; (()=>__a+__b)(); `t`;'); } catch (e) { ok = false; }
+  if (!ok) {
+    document.write('<style>html,body{background:#0b1220!important}</style>');
+    document.write('<div style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#0b1220;color:#eaf2ff;'
+      + 'font:20px/1.9 \'Microsoft YaHei\',sans-serif;padding:8vh 8vw;box-sizing:border-box">'
+      + '<div style="font-size:34px;font-weight:800;color:#ffd166;margin-bottom:18px">这个浏览器太旧，页面打不开</div>'
+      + '<p>本课需要 <b style="color:#9ee6a8">Edge</b> 或 <b style="color:#9ee6a8">Chrome</b>（2020 年以后版本）。</p>'
+      + '<p>你现在的浏览器是：<br><b style="color:#8fd8ff;word-break:break-all">' + navigator.userAgent + '</b></p>'
+      + '<p style="margin-top:26px">处理办法：<br>① 在电脑上找到 <b>Microsoft Edge</b> 图标，把本页地址复制进去打开；<br>'
+      + '② 或把默认浏览器改成 Edge（设置 → 应用 → 默认应用 → Web 浏览器）。</p>'
+      + '<p style="color:#9fb2cc;font-size:16px;margin-top:26px">如果已经用 Edge 还是这样，请把这个页面的网址和上面这行浏览器信息发给老师。</p>'
+      + '</div>');
+  }
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>课堂助教 · 猪八戒</title>
