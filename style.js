@@ -534,7 +534,7 @@
       if (!ok) btn.classList.add('bad');
       answered++;
       quizState.reasons[row.dataset.k] = { ok, why: it.why };
-      row.querySelector('.why')?.remove();
+      const wOld = row.querySelector('.why'); if (wOld) wOld.remove();
       const w = document.createElement('div'); w.className = 'why'; w.textContent = (ok ? '✔ ' : '✘ ') + it.why;
       row.after(w);
       playBranch(ok ? q.right : q.wrong, () => { renderQuizKeep(row.dataset.k, ok); });
