@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>课堂包自检页</title>
+<style>body{background:#0b1220;color:#eaf2ff;font:16px/1.8 "Microsoft YaHei",sans-serif;padding:24px 28px}
+h1{font-size:24px;color:#ffd166;margin:0 0 14px}td{padding:6px 12px;border-bottom:1px solid #22314a;vertical-align:top}
+.ok{color:#9ee6a8;font-weight:700}.bad{color:#ff8f8f;font-weight:700}.k{color:#9fb2cc}</style></head>
+<body><h1>课堂包自检页</h1><table id="t"></table>
+<p style="color:#9fb2cc;margin-top:18px">把这一页的内容截图或复制发给老师即可定位问题。</p>
+<script>
+(function () {
+  var rows = [];
+  function add(k, v, cls) { rows.push('<tr><td class="k">' + k + '</td><td class="' + (cls || '') + '">' + v + '</td></tr>'); }
+  function esc(s) { return String(s).replace(/</g, '&lt;'); }
+  var ua = navigator.userAgent;
+  add('浏览器信息', esc(ua));
+  var modem = '';
+  if (/MSIE |Trident\//.test(ua)) modem = 'IE（不支持，必须换 Edge / Chrome）';
+  else if (/Edg\//.test(ua)) modem = 'Edge（可以）';
+  else if (/Chrome\//.test(ua)) {
+    var m = ua.match(/Chrome\/(\d+)/);
+    modem = 'Chrome 内核 ' + (m ? m[1] : '?') + '（' + (m && +m[1] >= 80 ? '可以' : '太旧，建议升级') + '）';
+  } else if (/Firefox/.test(ua)) modem = 'Firefox（基本可用，语音可能不支持）';
+  else modem = '未知内核（' + ua + '）';
+  add('内核判断', esc(modem), /IE|太旧|未知/.test(modem) ? 'bad' : 'ok');
+
+  var es6 = true;
+  try { eval('const a=1; let b=2; (()=>a+b)(); `t`;'); } catch (e) { es6 = false; }
+  add('支持 ES6 语法', es6 ? '支持' : '不支持（页面会黑屏）', es6 ? 'ok' : 'bad');
+
+  add('页面地址', esc(location.href));
+  add('打开方式', location.protocol === 'file:' ? '本地文件 file://（语音不可用）' : 'http（正常）',
+      location.protocol === 'file:' ? 'bad' : 'ok');
+
+  var v = document.createElement('video');
+  var can = v.canPlayType('video/mp4; codecs="avc1.42E01E"');
+  add('能播 mp4（H.264）', can || '不支持', can ? 'ok' : 'bad');
+
+  add('本地存储', (function(){try{localStorage.setItem('t','1');localStorage.removeItem('t');return '可用'}catch(e){return '不可用（不影响上课）'}})());
+  document.getElementById('t').innerHTML = rows.join('');
+})();
+</script></body></html>
