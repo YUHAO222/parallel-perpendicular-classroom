@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<script>
+/* 旧内核兜底：IE / 360兼容模式 解析不了本页脚本，会只显示一片黑。 */
+(function () {
+  var ok = true;
+  try { eval('const __a=1; let __b=2; (()=>__a+__b)(); `t`;'); } catch (e) { ok = false; }
+  if (!ok) {
+    document.write('<style>html,body{background:#0b1220!important}</style>');
+    document.write('<div style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#0b1220;color:#eaf2ff;'
+      + 'font:20px/1.9 \'Microsoft YaHei\',sans-serif;padding:8vh 8vw;box-sizing:border-box">'
+      + '<div style="font-size:34px;font-weight:800;color:#ffd166;margin-bottom:18px">这个浏览器太旧，页面打不开</div>'
+      + '<p>本页需要 <b style="color:#9ee6a8">Edge</b> 或 <b style="color:#9ee6a8">Chrome</b>（2020 年以后版本）。</p>'
+      + '<p>你现在的浏览器是：<br><b style="color:#8fd8ff;word-break:break-all">' + navigator.userAgent + '</b></p>'
+      + '</div>');
+  }
+})();
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>悟空提问官 · 平行与垂直</title>
+<style>
+  :root{ --ink:#eaf2ff; --dim:#9fb2cc; --gold:#ffd166; --line:rgba(120,170,255,.22); }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:radial-gradient(1200px 700px at 25% 0%,#1a2440 0%,#0a1020 55%,#04060d 100%);
+       color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+       display:flex;flex-direction:column;overflow:hidden}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  .face{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+        font-size:30px;background:linear-gradient(160deg,#ffd98a,#d98324);box-shadow:0 8px 22px rgba(0,0,0,.45)}
+  .name{font-size:clamp(20px,2vw,28px);font-weight:800;letter-spacing:1px;color:#ffe6a6}
+  .name small{display:block;font-size:13px;font-weight:400;letter-spacing:0;color:var(--dim);margin-top:2px}
+  header a{margin-left:auto;color:#cfe0f5;text-decoration:none;border:1px solid var(--line);
+           padding:8px 16px;border-radius:999px;font-size:14px}
+  header a:hover{background:rgba(120,170,255,.12)}
+  main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;padding:10px clamp(16px,4vw,60px)}
+  .prog{font-size:clamp(13px,1.2vw,17px);color:var(--dim);letter-spacing:1px}
+  .qcard{width:min(1000px,94%);background:rgba(16,26,44,.92);border:1px solid rgba(255,209,102,.34);
+         border-radius:20px;padding:clamp(20px,2.6vw,44px);box-shadow:0 24px 60px rgba(0,0,0,.5);text-align:center}
+  .qtag{display:inline-block;font-size:clamp(12px,1.1vw,16px);color:#0f1c10;background:linear-gradient(180deg,#ffe3a0,#dcae55);
+        padding:4px 14px;border-radius:999px;font-weight:800;letter-spacing:1px;margin-bottom:14px}
+  .qtext{font-size:clamp(24px,2.8vw,46px);line-height:1.5;font-weight:800;color:#fff}
+  .opts{display:flex;gap:clamp(12px,1.4vw,28px);justify-content:center;margin-top:clamp(16px,2vw,32px);flex-wrap:wrap}
+  .opts button{font-family:inherit;cursor:pointer;font-size:clamp(20px,1.9vw,34px);font-weight:800;
+        padding:.55em 1.5em;border-radius:14px;border:1px solid #3a4f6b;background:transparent;color:#dbe9ff}
+  .opts button:hover{border-color:rgba(255,209,102,.7);background:rgba(255,209,102,.10)}
+  .opts button.right{background:#173a24;border-color:#5f8f45;color:#d8ffc8}
+  .opts button.wrong{background:#3a1b1b;border-color:#8f4545;color:#ffd8d8}
+  .fb{width:min(1000px,94%);min-height:2.6em;font-size:clamp(17px,1.7vw,26px);line-height:1.6;text-align:center;color:#ffe6b3}
+  .foot{display:flex;gap:14px;align-items:center;justify-content:center;padding-bottom:18px}
+  .foot button{font-family:inherit;cursor:pointer;font-size:clamp(16px,1.5vw,24px);font-weight:800;
+        padding:.6em 1.6em;border-radius:999px;border:none;background:linear-gradient(180deg,#ffe08a,#ffb020);color:#241a05}
+  .foot button.ghost{background:transparent;border:1px solid #3a4f6b;color:#cfe0f5}
+  .foot button:disabled{opacity:.4;cursor:default}
+</style>
+</head>
+<body>
+<header>
+  <div class="face">🐵</div>
+  <div class="name">悟空提问官 · 孙悟空<small>平行与垂直 · 课堂追问</small></div>
+  <a href="assistant.html">找八戒答疑 ▶</a>
+</header>
+
+<main>
+  <div class="prog" id="prog">第 1 / 8 题</div>
+  <div class="qcard">
+    <div class="qtag" id="tag">判断题</div>
+    <div class="qtext" id="qtext">加载中…</div>
+    <div class="opts" id="opts"></div>
+  </div>
+  <div class="fb" id="fb"></div>
+</main>
+
+<div class="foot">
+  <button id="next" disabled>下一题 ▶</button>
+  <button class="ghost" id="reset">从头再来</button>
+</div>
+
+<script>
+const Q = [
+  { q: "不相交的两条直线，一定是平行线吗？", opts: ["对", "错"], ans: "错",
+    why: "还要加一个条件——在同一个平面内。不在同一平面上的两条直线不相交，也不是平行线。" },
+  { q: "两条直线相交成直角，就说这两条直线互相垂直。", opts: ["对", "错"], ans: "对",
+    why: "这正是互相垂直的定义。垂直与摆放方向无关，斜着放只要相交成直角也算垂直。" },
+  { q: "两条直线相交，交点就叫垂足。", opts: ["对", "错"], ans: "错",
+    why: "只有相交成直角时，这个交点才叫垂足。普通相交的交点只叫交点。" },
+  { q: "在同一平面内，两条直线不平行就一定相交。", opts: ["对", "错"], ans: "对",
+    why: "同一平面内两条直线只有相交、平行两种位置关系。" },
+  { q: "两条平行线之间的距离处处相等。", opts: ["对", "错"], ans: "对",
+    why: "平行线再怎么延长也不相交，它们之间的宽度处处一样。" },
+  { q: "可以说一条直线“互相平行”。", opts: ["对", "错"], ans: "错",
+    why: "平行与垂直都是两条直线之间的关系，一条直线不能自己和自己“互相平行”。" },
+  { q: "把两条互相垂直的直线整体转个方向，它们就不垂直了。", opts: ["对", "错"], ans: "错",
+    why: "垂直只看是否相交成直角，和摆放方向无关，转完还是直角，仍然垂直。" },
+  { q: "两条直线看着不相交，延长后相交，它们是平行线。", opts: ["对", "错"], ans: "错",
+    why: "判断平行要延长后再看，延长后相交就不是平行线。" }
+];
+
+let idx = 0, answered = false, score = 0;
+const elProg = document.getElementById('prog');
+const elText = document.getElementById('qtext');
+const elOpts = document.getElementById('opts');
+const elFb = document.getElementById('fb');
+const elNext = document.getElementById('next');
+const elTag = document.getElementById('tag');
+
+function render() {
+  const q = Q[idx];
+  answered = false;
+  elTag.textContent = '判断题 · 想一想';
+  elProg.textContent = `第 ${idx + 1} / ${Q.length} 题` + (score ? `　已答对 ${score} 题` : '');
+  elText.textContent = q.q;
+  elFb.textContent = '';
+  elNext.disabled = true;
+  elOpts.innerHTML = '';
+  q.opts.forEach(o => {
+    const b = document.createElement('button');
+    b.textContent = o;
+    b.onclick = () => pick(b, o, q);
+    elOpts.appendChild(b);
+  });
+}
+
+function pick(btn, val, q) {
+  if (answered) return;
+  answered = true;
+  const ok = val === q.ans;
+  if (ok) { score++; btn.classList.add('right'); }
+  else {
+    btn.classList.add('wrong');
+    [...elOpts.children].forEach(b => { if (b.textContent === q.ans) b.classList.add('right'); });
+  }
+  elFb.innerHTML = (ok ? '✔ 答对了！' : '✘ 再想想～ 正确答案：<b>' + q.ans + '</b>') + '<br>' + q.why;
+  elNext.disabled = false;
+  elNext.textContent = (idx === Q.length - 1) ? '看成绩 ▶' : '下一题 ▶';
+}
+
+elNext.onclick = () => {
+  if (idx < Q.length - 1) { idx++; render(); }
+  else {
+    elTag.textContent = '闯关结束';
+    elText.textContent = `8 道题你答对了 ${score} 道`;
+    elOpts.innerHTML = '';
+    elFb.innerHTML = score >= 7 ? '厉害！这节课的易错点你都避开了。' :
+      (score >= 5 ? '不错，把错的那几题的“为什么”再读一遍就更稳了。' : '别急，回到课件再看一遍平行与垂直的定义，然后从头再来一次。');
+    elNext.disabled = true;
+    elProg.textContent = '';
+  }
+};
+document.getElementById('reset').onclick = () => { idx = 0; score = 0; render(); };
+
+render();
+</script>
+</body>
+</html>
